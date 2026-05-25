@@ -7,4 +7,5 @@ services:
       - "3000:3000"
     volumes:
       - ./data.json:/app/data.json
+      - ./data/mapas:/app/data/mapas
     restart: unless-stopped
