@@ -226,12 +226,17 @@ body, html, #root {
   cursor: not-allowed;
 }
 
-.captain-input {
+.captain-container {
   position: absolute;
   bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10000;
+  display: flex;
+  gap: 10px;
+}
+
+.captain-input {
   padding: 8px 15px;
   border: 2px solid rgba(0,0,0,0.2);
   border-radius: 8px;
@@ -239,4 +244,20 @@ body, html, #root {
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
   text-align: center;
   font-weight: bold;
+}
+
+.captain-submit-btn {
+  padding: 8px 15px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.captain-submit-btn:hover {
+  background: #1d4ed8;
 }

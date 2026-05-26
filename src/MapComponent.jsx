@@ -390,16 +390,21 @@ function MapComponent() {
       </MapContainer>
 
       {/* Input del Capitán - fuera del mapa para que sea visible */}
-      <input 
-        type="text" 
-        className="captain-input" 
-        placeholder="Nombre del Capitán" 
-        value={captain}
-        onChange={(e) => {
-          setCaptain(e.target.value);
-          socket.emit('update_captain', e.target.value);
-        }}
-      />
+      <div className="captain-container">
+        <input 
+          type="text" 
+          className="captain-input" 
+          placeholder="Nombre del Capitán" 
+          value={captain}
+          onChange={(e) => setCaptain(e.target.value)}
+        />
+        <button 
+          className="captain-submit-btn"
+          onClick={() => socket.emit('update_captain', captain)}
+        >
+          Subir
+        </button>
+      </div>
 
       {/* Botón de limpiar todo - fuera del mapa para que el modal no quede tapado */}
       <ClearAllButton onConfirm={() => socket.emit('clear_all')} />
