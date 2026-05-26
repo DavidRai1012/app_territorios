@@ -183,20 +183,29 @@ function MapComponent() {
   const [partStates, setPartStates] = useState({});
   const [territories, setTerritories] = useState([]);
   const [currentZoom, setCurrentZoom] = useState(16); // Estado global del zoom
+  const [captain, setCaptain] = useState("");
 
   useEffect(() => {
     socket.on('initial_state', (data) => {
       setPartStates(data.states || {});
       setTerritories(data.territories || []);
+      if (data.captainName !== undefined) {
+        setCaptain(data.captainName);
+      }
     });
 
     socket.on('part_updated', ({ id, status }) => {
       setPartStates(prev => ({ ...prev, [id]: status }));
     });
 
+    socket.on('captain_updated', (name) => {
+      setCaptain(name);
+    });
+
     return () => {
       socket.off('initial_state');
       socket.off('part_updated');
+      socket.off('captain_updated');
     };
   }, []);
 
@@ -385,6 +394,11 @@ function MapComponent() {
         type="text" 
         className="captain-input" 
         placeholder="Nombre del Capitán" 
+        value={captain}
+        onChange={(e) => {
+          setCaptain(e.target.value);
+          socket.emit('update_captain', e.target.value);
+        }}
       />
 
       {/* Botón de limpiar todo - fuera del mapa para que el modal no quede tapado */}

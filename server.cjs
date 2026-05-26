@@ -74,7 +74,14 @@ io.on('connection', (socket) => {
   socket.on('clear_all', () => {
     savePartStates({});
     const territories = loadTerritories();
-    io.emit('initial_state', { states: {}, territories });
+    data.states = {};
+    io.emit('initial_state', { states: {}, territories, captainName: data.captainName || "" });
+  });
+
+  socket.on('update_captain', (name) => {
+    data.captainName = name;
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+    socket.broadcast.emit('captain_updated', name);
   });
 
   socket.on('disconnect', () => {
