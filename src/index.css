@@ -228,21 +228,22 @@ body, html, #root {
 
 .captain-container {
   position: absolute;
-  bottom: 20px;
+  bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10000;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  max-width: 90vw;
 }
 
 .captain-label {
   background: rgba(255,255,255,0.95);
-  padding: 6px 16px;
+  padding: 4px 12px;
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 13px;
   color: #1e293b;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   white-space: nowrap;
@@ -250,27 +251,28 @@ body, html, #root {
 
 .captain-row {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .captain-input {
-  padding: 8px 15px;
+  padding: 6px 10px;
   border: 2px solid rgba(0,0,0,0.2);
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 14px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
   text-align: center;
   font-weight: bold;
-  width: 180px;
+  width: 150px;
+  max-width: 50vw;
 }
 
 .captain-submit-btn {
-  padding: 8px 15px;
+  padding: 6px 12px;
   background: #2563eb;
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: bold;
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
@@ -278,4 +280,36 @@ body, html, #root {
 
 .captain-submit-btn:hover {
   background: #1d4ed8;
+}
+
+/* Responsive para pantallas pequeñas (celulares) */
+@media (max-height: 700px) {
+  .captain-container {
+    bottom: 5px;
+    gap: 2px;
+  }
+  .captain-label {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+  .captain-input {
+    padding: 4px 6px;
+    font-size: 12px;
+    width: 120px;
+  }
+  .captain-submit-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 400px) {
+  .captain-input {
+    width: 110px;
+    font-size: 12px;
+  }
+  .captain-submit-btn {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
 }
