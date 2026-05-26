@@ -234,16 +234,6 @@ function MapComponent() {
         <ZoomTracker onZoomChange={setCurrentZoom} />
         <MapBoundsFitter territories={territories} />
         <UserLocation />
-        
-        {/* Input del Capitán */}
-        <input 
-          type="text" 
-          className="captain-input" 
-          placeholder="Nombre del Capitán" 
-        />
-
-        {/* Botón de limpiar todo */}
-        <ClearAllButton onConfirm={() => socket.emit('clear_all')} />
 
         {territories.map(territory => {
           // Calculamos el estado general del territorio
@@ -282,7 +272,9 @@ function MapComponent() {
                  pathOptions={{ 
                    color: territoryColor, 
                    weight: currentZoom <= 16 ? 5 : 3, 
-                   fill: false, 
+                   fill: currentZoom <= 16,
+                   fillColor: territoryColor,
+                   fillOpacity: 0.2,
                    dashArray: '5, 5',
                    opacity: 0.9
                  }}
@@ -387,6 +379,16 @@ function MapComponent() {
           );
         })}
       </MapContainer>
+
+      {/* Input del Capitán - fuera del mapa para que sea visible */}
+      <input 
+        type="text" 
+        className="captain-input" 
+        placeholder="Nombre del Capitán" 
+      />
+
+      {/* Botón de limpiar todo - fuera del mapa para que el modal no quede tapado */}
+      <ClearAllButton onConfirm={() => socket.emit('clear_all')} />
     </div>
   );
 }
