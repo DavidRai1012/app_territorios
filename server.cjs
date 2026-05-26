@@ -53,6 +53,8 @@ function loadTerritories() {
   return territories;
 }
 
+let currentCaptain = "";
+
 io.on('connection', (socket) => {
   console.log('Usuario conectado');
   
@@ -60,7 +62,7 @@ io.on('connection', (socket) => {
   const states = loadPartStates();
   const territories = loadTerritories();
   
-  socket.emit('initial_state', { states, territories });
+  socket.emit('initial_state', { states, territories, captainName: currentCaptain });
 
   socket.on('update_part', ({ id, territory_id, block_id, part_index, status }) => {
     const states = loadPartStates();
@@ -74,14 +76,12 @@ io.on('connection', (socket) => {
   socket.on('clear_all', () => {
     savePartStates({});
     const territories = loadTerritories();
-    data.states = {};
-    io.emit('initial_state', { states: {}, territories, captainName: data.captainName || "" });
+    io.emit('initial_state', { states: {}, territories, captainName: currentCaptain });
   });
 
   socket.on('update_captain', (name) => {
-    data.captainName = name;
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-    socket.broadcast.emit('captain_updated', name);
+    currentCaptain = name;
+    io.emit('captain_updated', name);
   });
 
   socket.on('disconnect', () => {

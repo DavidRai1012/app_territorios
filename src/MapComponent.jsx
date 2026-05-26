@@ -184,6 +184,7 @@ function MapComponent() {
   const [territories, setTerritories] = useState([]);
   const [currentZoom, setCurrentZoom] = useState(16); // Estado global del zoom
   const [captain, setCaptain] = useState("");
+  const [captainInput, setCaptainInput] = useState("");
 
   useEffect(() => {
     socket.on('initial_state', (data) => {
@@ -389,21 +390,30 @@ function MapComponent() {
         })}
       </MapContainer>
 
-      {/* Input del Capitán - fuera del mapa para que sea visible */}
+      {/* Nombre del Capitán - fuera del mapa para que sea visible */}
       <div className="captain-container">
-        <input 
-          type="text" 
-          className="captain-input" 
-          placeholder="Nombre del Capitán" 
-          value={captain}
-          onChange={(e) => setCaptain(e.target.value)}
-        />
-        <button 
-          className="captain-submit-btn"
-          onClick={() => socket.emit('update_captain', captain)}
-        >
-          Subir
-        </button>
+        <div className="captain-label">
+          Capitán: <strong>{captain || '---'}</strong>
+        </div>
+        <div className="captain-row">
+          <input 
+            type="text" 
+            className="captain-input" 
+            placeholder="Escriba el nombre" 
+            value={captainInput}
+            onChange={(e) => setCaptainInput(e.target.value)}
+          />
+          <button 
+            className="captain-submit-btn"
+            onClick={() => {
+              if (captainInput.trim()) {
+                socket.emit('update_captain', captainInput.trim());
+              }
+            }}
+          >
+            Subir
+          </button>
+        </div>
       </div>
 
       {/* Botón de limpiar todo - fuera del mapa para que el modal no quede tapado */}
