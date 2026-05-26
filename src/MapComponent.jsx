@@ -17,35 +17,43 @@ function MapBoundsFitter({ territories }) {
   return null;
 }
 
-// Componente para la marca de agua escalable y dinámica
-function TerritoryWatermark({ territory }) {
+// Componente para rastrear el zoom globalmente
+function ZoomTracker({ onZoomChange }) {
   const map = useMapEvents({
-    zoomend: () => setZoom(map.getZoom())
+    zoomend: () => onZoomChange(map.getZoom())
   });
-  const [currentZoom, setZoom] = useState(map.getZoom());
+  // Inicializar en el montaje
+  useEffect(() => {
+    onZoomChange(map.getZoom());
+  }, [map, onZoomChange]);
+  return null;
+}
 
+// Componente para la marca de agua dinámica
+function TerritoryWatermark({ territory, currentZoom }) {
   if (!territory || !territory.limites) return null;
 
-  // Calculamos opacidad dinámica: más lejos (zoom menor) = más opaco, más cerca = más translúcido
-  // Zoom 14 -> 0.5, Zoom 15 -> 0.35, Zoom 16 -> 0.2, Zoom 17 -> 0.05
-  let opacity = 0.5 - (currentZoom - 14) * 0.15;
-  if (opacity < 0.03) opacity = 0.03; // Nunca desaparece por completo
-  if (opacity > 0.8) opacity = 0.8;
+  // Lógica: Si el zoom es <= 15, se ve nítido (opacidad 1).
+  // Si el zoom es > 15 (cerca), podemos ocultarlo o hacerlo muy transparente
+  // para que no estorbe con los números de las manzanas.
+  const opacity = currentZoom <= 16 ? 1 : 0.15;
+  // Reducimos el tamaño de fuente para que no se salga de los límites de la caja
+  const fontSize = currentZoom <= 16 ? "40" : "20"; 
 
   const bounds = L.latLngBounds(territory.limites);
 
   return (
-    <SVGOverlay bounds={bounds} zIndexOffset={-100}>
+    <SVGOverlay bounds={bounds} zIndexOffset={currentZoom <= 16 ? 100 : -100}>
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <text 
           x="50%" 
           y="50%" 
           dominantBaseline="middle" 
           textAnchor="middle" 
-          fontSize="40" 
+          fontSize={fontSize}
           fontWeight="900" 
           fill={`rgba(0,0,0,${opacity})`}
-          style={{ userSelect: 'none', transition: 'fill 0.3s' }}
+          style={{ userSelect: 'none', transition: 'all 0.3s', textShadow: '2px 2px 4px rgba(255,255,255,0.8)' }}
         >
           {territory.numero_territorio}
         </text>
@@ -54,7 +62,6 @@ function TerritoryWatermark({ territory }) {
   );
 }
 
-// Componente para ubicación en tiempo real
 function UserLocation() {
   const [position, setPosition] = useState(null);
   
@@ -96,9 +103,86 @@ function UserLocation() {
   );
 }
 
+function ClearAllButton({ onConfirm }) {
+  const [step, setStep] = useState(0);
+  const [countdown, setCountdown] = useState(15);
+
+  useEffect(() => {
+    let timer;
+    if (step === 1 && countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [step, countdown]);
+
+  const handleStart = () => {
+    setStep(1);
+    setCountdown(15);
+  };
+
+  return (
+    <>
+      <div style={{ position: 'absolute', top: 15, left: 15, zIndex: 1000 }}>
+        <button 
+          onClick={handleStart} 
+          style={{ 
+            padding: '10px 15px', 
+            background: 'white', 
+            border: '2px solid red', 
+            borderRadius: '8px', 
+            cursor: 'pointer', 
+            color: 'red', 
+            fontWeight: 'bold',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+          }}
+        >
+          🗑️ Limpiar Todo
+        </button>
+      </div>
+
+      {step === 1 && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>¿Seguro que quiere limpiar todas las manzanas?</h2>
+            <p>Esta acción borrará el progreso de todos los territorios. Por favor espere {countdown} segundos para confirmar.</p>
+            <button 
+              disabled={countdown > 0} 
+              onClick={() => setStep(2)}
+              style={countdown === 0 ? { background: '#ef4444', color: 'white' } : {}}
+            >
+              {countdown > 0 ? `Esperar ${countdown}s` : 'Continuar'}
+            </button>
+            <button onClick={() => setStep(0)}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {step === 2 && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>ÚLTIMA ADVERTENCIA</h2>
+            <p>Oprima el botón rojo para limpiar TODAS las manzanas.</p>
+            <button 
+              style={{ background: 'red', color: 'white', fontWeight: 'bold' }}
+              onClick={() => {
+                onConfirm();
+                setStep(0);
+              }}
+            >
+              Borrar Todo Definitivamente
+            </button>
+            <button onClick={() => setStep(0)}>Cancelar</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function MapComponent() {
   const [partStates, setPartStates] = useState({});
   const [territories, setTerritories] = useState([]);
+  const [currentZoom, setCurrentZoom] = useState(16); // Estado global del zoom
 
   useEffect(() => {
     socket.on('initial_state', (data) => {
@@ -147,24 +231,67 @@ function MapComponent() {
           maxNativeZoom={19} /* Tope real de las imágenes gratuitas */
         />
         
+        <ZoomTracker onZoomChange={setCurrentZoom} />
         <MapBoundsFitter territories={territories} />
         <UserLocation />
+        
+        {/* Input del Capitán */}
+        <input 
+          type="text" 
+          className="captain-input" 
+          placeholder="Nombre del Capitán" 
+        />
 
-        {territories.map(territory => (
+        {/* Botón de limpiar todo */}
+        <ClearAllButton onConfirm={() => socket.emit('clear_all')} />
+
+        {territories.map(territory => {
+          // Calculamos el estado general del territorio
+          let totalParts = 0;
+          let completedParts = 0;
+          
+          if (territory.manzanas) {
+            territory.manzanas.forEach(block => {
+              const numSides = block.puntos.length;
+              totalParts += numSides;
+              for (let i = 0; i < numSides; i++) {
+                if (partStates[`${territory.territorio_id}_${block.id}_p${i}`] === 'completed') {
+                  completedParts++;
+                }
+              }
+            });
+          }
+
+          // Determinamos el color del contorno del territorio
+          let territoryColor = 'rgba(0,0,0,0.4)'; // Gris por defecto ("ningún color")
+          if (completedParts > 0 && completedParts < totalParts) {
+            territoryColor = '#eab308'; // Amarillo (Progreso parcial)
+          } else if (completedParts === totalParts && totalParts > 0) {
+            territoryColor = '#22c55e'; // Verde (Todo completo)
+          }
+
+          return (
           <React.Fragment key={territory.territorio_id}>
             
-            <TerritoryWatermark territory={territory} />
+            <TerritoryWatermark territory={territory} currentZoom={currentZoom} />
 
             {/* Borde del territorio */}
             {territory.limites && territory.limites.length >= 3 && (
                <Polygon 
                  positions={territory.limites}
-                 pathOptions={{ color: 'rgba(0,0,0,0.2)', weight: 2, fill: false, dashArray: '5, 5' }}
+                 pathOptions={{ 
+                   color: territoryColor, 
+                   weight: currentZoom <= 16 ? 5 : 3, 
+                   fill: false, 
+                   dashArray: '5, 5',
+                   opacity: 0.9
+                 }}
                  interactive={false}
                />
             )}
 
-            {territory.manzanas.map(block => {
+            {/* Solo renderizamos las manzanas si el zoom es lo suficientemente cerca (> 16) */}
+            {currentZoom > 16 && territory.manzanas.map(block => {
               const numSides = block.puntos.length;
               const completedCount = getBlockStatus(territory.territorio_id, block.id, numSides);
               const isFullyCompleted = completedCount === numSides;
@@ -255,8 +382,10 @@ function MapComponent() {
                 </React.Fragment>
               );
             })}
+
           </React.Fragment>
-        ))}
+          );
+        })}
       </MapContainer>
     </div>
   );

@@ -71,6 +71,12 @@ io.on('connection', (socket) => {
     io.emit('part_updated', { id, status });
   });
 
+  socket.on('clear_all', () => {
+    savePartStates({});
+    const territories = loadTerritories();
+    io.emit('initial_state', { states: {}, territories });
+  });
+
   socket.on('disconnect', () => {
     console.log('Usuario desconectado');
   });
