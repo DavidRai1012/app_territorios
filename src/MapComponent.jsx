@@ -22,7 +22,6 @@ function ZoomTracker({ onZoomChange }) {
   const map = useMapEvents({
     zoomend: () => onZoomChange(map.getZoom())
   });
-  // Inicializar en el montaje
   useEffect(() => {
     onZoomChange(map.getZoom());
   }, [map, onZoomChange]);
@@ -33,11 +32,7 @@ function ZoomTracker({ onZoomChange }) {
 function TerritoryWatermark({ territory, currentZoom }) {
   if (!territory || !territory.limites) return null;
 
-  // Lógica: Si el zoom es <= 15, se ve nítido (opacidad 1).
-  // Si el zoom es > 15 (cerca), podemos ocultarlo o hacerlo muy transparente
-  // para que no estorbe con los números de las manzanas.
   const opacity = currentZoom <= 16 ? 1 : 0.15;
-  // Reducimos el tamaño de fuente para que no se salga de los límites de la caja
   const fontSize = currentZoom <= 16 ? "40" : "20"; 
 
   const bounds = L.latLngBounds(territory.limites);
@@ -136,7 +131,7 @@ function ClearAllButton({ onConfirm }) {
             boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
           }}
         >
-          🗑️ Limpiar Todo
+          🗑️ Limpiar
         </button>
       </div>
 
@@ -179,34 +174,135 @@ function ClearAllButton({ onConfirm }) {
   );
 }
 
+// Modal para pedir el nombre al entrar
+function NameModal({ onSubmit }) {
+  const [name, setName] = useState(localStorage.getItem('userName') || '');
+  
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content name-modal">
+        <h2 style={{ color: '#2563eb' }}>👋 Bienvenido</h2>
+        <p>Ingrese su nombre para registrar los cambios que realice:</p>
+        <input 
+          type="text" 
+          value={name} 
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Su nombre"
+          className="name-modal-input"
+          autoFocus
+        />
+        <button 
+          onClick={() => {
+            if (name.trim()) {
+              localStorage.setItem('userName', name.trim());
+              onSubmit(name.trim());
+            }
+          }}
+          disabled={!name.trim()}
+          style={name.trim() ? { background: '#2563eb', color: 'white' } : {}}
+        >
+          Entrar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Formatea fecha ISO a formato legible
+function formatDate(isoDate) {
+  const d = new Date(isoDate);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const mins = String(d.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${mins}`;
+}
+
+// Devuelve emoji y texto según el tipo de evento
+function getLogLabel(entry) {
+  switch (entry.type) {
+    case 'completar_manzana':
+      return { emoji: '🟢', text: `Completar manzana ${entry.blockNum}` };
+    case 'parcial_manzana':
+      return { emoji: '🟡', text: `Realizar parcial manzana ${entry.blockNum}` };
+    case 'terminar_parcial':
+      return { emoji: '✅', text: `Terminar parcial manzana ${entry.blockNum}` };
+    case 'territorio_completo':
+      return { emoji: '🏆', text: `¡Territorio ${entry.territoryNum} COMPLETADO!` };
+    case 'limpiar_todo':
+      return { emoji: '🗑️', text: 'Limpiar todo' };
+    default:
+      return { emoji: '📝', text: 'Cambio' };
+  }
+}
+
+// Panel del registro de actividad
+function LogPanel({ log, onClose }) {
+  const reversed = [...log].reverse();
+
+  return (
+    <div className="log-panel-overlay" onClick={onClose}>
+      <div className="log-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="log-panel-header">
+          <h3>📋 Registro de Actividad</h3>
+          <button className="log-close-btn" onClick={onClose}>✕</button>
+        </div>
+        <div className="log-panel-body">
+          {reversed.length === 0 && <p className="log-empty">No hay actividad registrada aún.</p>}
+          {reversed.map((entry, i) => {
+            const { emoji, text } = getLogLabel(entry);
+            return (
+              <div key={i} className={`log-entry log-type-${entry.type}`}>
+                <span className="log-emoji">{emoji}</span>
+                <div className="log-info">
+                  <strong>{text}</strong>
+                  {entry.territoryNum && entry.type !== 'territorio_completo' && (
+                    <span className="log-territory"> (Territorio {entry.territoryNum})</span>
+                  )}
+                  <div className="log-meta">
+                    {entry.userName} — {formatDate(entry.date)}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MapComponent() {
   const [partStates, setPartStates] = useState({});
   const [territories, setTerritories] = useState([]);
-  const [currentZoom, setCurrentZoom] = useState(16); // Estado global del zoom
-  const [captain, setCaptain] = useState("");
-  const [captainInput, setCaptainInput] = useState("");
+  const [currentZoom, setCurrentZoom] = useState(16);
+  const [userName, setUserName] = useState('');
+  const [showNameModal, setShowNameModal] = useState(true);
+  const [activityLog, setActivityLog] = useState([]);
+  const [showLogPanel, setShowLogPanel] = useState(false);
+  const [nameEdit, setNameEdit] = useState('');
+  const [editingName, setEditingName] = useState(false);
 
   useEffect(() => {
     socket.on('initial_state', (data) => {
       setPartStates(data.states || {});
       setTerritories(data.territories || []);
-      if (data.captainName !== undefined) {
-        setCaptain(data.captainName);
-      }
+      if (data.activityLog) setActivityLog(data.activityLog);
     });
 
     socket.on('part_updated', ({ id, status }) => {
       setPartStates(prev => ({ ...prev, [id]: status }));
     });
 
-    socket.on('captain_updated', (name) => {
-      setCaptain(name);
+    socket.on('activity_log', (log) => {
+      setActivityLog(log);
     });
 
     return () => {
       socket.off('initial_state');
       socket.off('part_updated');
-      socket.off('captain_updated');
+      socket.off('activity_log');
     };
   }, []);
 
@@ -214,7 +310,7 @@ function MapComponent() {
     const id = `${territoryId}_${blockId}_p${partIndex}`;
     const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
     setPartStates(prev => ({ ...prev, [id]: newStatus }));
-    socket.emit('update_part', { id, territory_id: territoryId, block_id: blockId, part_index: partIndex, status: newStatus });
+    socket.emit('update_part', { id, territory_id: territoryId, block_id: blockId, part_index: partIndex, status: newStatus, userName });
   };
 
   const getBlockStatus = (territoryId, blockId, numSides) => {
@@ -225,20 +321,31 @@ function MapComponent() {
     return completedCount;
   };
 
+  // Si el modal de nombre está activo, mostrarlo
+  if (showNameModal) {
+    return (
+      <NameModal onSubmit={(name) => {
+        setUserName(name);
+        setNameEdit(name);
+        setShowNameModal(false);
+      }} />
+    );
+  }
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <MapContainer 
         center={[4.7425, -74.090]}
         zoom={16} 
         minZoom={14}
-        maxZoom={22} /* Permite hacer zoom hasta 22 (estirando el mapa en lugar de grises) */
+        maxZoom={22}
         style={{ width: '100%', height: '100%', zIndex: 1 }}
         zoomControl={false}
       >
         <TileLayer
           attribution='&copy; OpenStreetMap'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maxNativeZoom={19} /* Tope real de las imágenes gratuitas */
+          maxNativeZoom={19}
         />
         
         <ZoomTracker onZoomChange={setCurrentZoom} />
@@ -263,11 +370,11 @@ function MapComponent() {
           }
 
           // Determinamos el color del contorno del territorio
-          let territoryColor = 'rgba(0,0,0,0.4)'; // Gris por defecto ("ningún color")
+          let territoryColor = 'rgba(0,0,0,0.4)';
           if (completedParts > 0 && completedParts < totalParts) {
-            territoryColor = '#eab308'; // Amarillo (Progreso parcial)
+            territoryColor = '#eab308';
           } else if (completedParts === totalParts && totalParts > 0) {
-            territoryColor = '#22c55e'; // Verde (Todo completo)
+            territoryColor = '#22c55e';
           }
 
           return (
@@ -352,7 +459,8 @@ function MapComponent() {
                                 territory_id: territory.territorio_id, 
                                 block_id: block.id, 
                                 part_index: i, 
-                                status: targetState 
+                                status: targetState,
+                                userName
                               });
                             });
                           }}
@@ -390,34 +498,50 @@ function MapComponent() {
         })}
       </MapContainer>
 
-      {/* Nombre del Capitán - fuera del mapa para que sea visible */}
-      <div className="captain-container">
-        <div className="captain-label">
-          Capitán: <strong>{captain || '---'}</strong>
-        </div>
-        <div className="captain-row">
-          <input 
-            type="text" 
-            className="captain-input" 
-            placeholder="Escriba el nombre" 
-            value={captainInput}
-            onChange={(e) => setCaptainInput(e.target.value)}
-          />
-          <button 
-            className="captain-submit-btn"
-            onClick={() => {
-              if (captainInput.trim()) {
-                socket.emit('update_captain', captainInput.trim());
-              }
-            }}
-          >
-            Subir
-          </button>
-        </div>
+      {/* Botón menú hamburguesa (debajo de ubicación) */}
+      <div style={{ position: 'absolute', top: 70, right: 15, zIndex: 10000 }}>
+        <button 
+          className="hamburger-btn"
+          onClick={() => setShowLogPanel(true)}
+          title="Registro de actividad"
+        >
+          ☰
+        </button>
       </div>
 
-      {/* Botón de limpiar todo - fuera del mapa para que el modal no quede tapado */}
-      <ClearAllButton onConfirm={() => socket.emit('clear_all')} />
+      {/* Nombre del usuario actual + edición */}
+      <div className="user-name-bar">
+        {!editingName ? (
+          <>
+            <span>👤 {userName}</span>
+            <button className="name-edit-btn" onClick={() => { setEditingName(true); setNameEdit(userName); }}>✏️</button>
+          </>
+        ) : (
+          <>
+            <input 
+              type="text"
+              className="name-edit-input"
+              value={nameEdit}
+              onChange={(e) => setNameEdit(e.target.value)}
+              autoFocus
+            />
+            <button className="name-save-btn" onClick={() => {
+              if (nameEdit.trim()) {
+                setUserName(nameEdit.trim());
+                localStorage.setItem('userName', nameEdit.trim());
+              }
+              setEditingName(false);
+            }}>✓</button>
+            <button className="name-cancel-btn" onClick={() => setEditingName(false)}>✕</button>
+          </>
+        )}
+      </div>
+
+      {/* Botón de limpiar todo */}
+      <ClearAllButton onConfirm={() => socket.emit('clear_all', { userName })} />
+
+      {/* Panel de registro de actividad */}
+      {showLogPanel && <LogPanel log={activityLog} onClose={() => setShowLogPanel(false)} />}
     </div>
   );
 }
