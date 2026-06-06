@@ -249,6 +249,28 @@ body, html, #root {
   border-color: #2563eb;
 }
 
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-wrapper .name-modal-input {
+  padding-right: 45px;
+}
+
+.toggle-pwd-btn {
+  position: absolute;
+  right: 8px;
+  background: none !important;
+  border: none !important;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+}
+
 /* ============ User name bar (bottom) ============ */
 .user-name-bar {
   position: absolute;

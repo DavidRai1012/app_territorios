@@ -174,6 +174,55 @@ function ClearAllButton({ onConfirm }) {
   );
 }
 
+// Modal para pedir la contraseña
+function PasswordModal({ onSuccess }) {
+  const [password, setPassword] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = () => {
+    if (password === 'Sal8318') {
+      onSuccess();
+    } else {
+      setError('Contraseña incorrecta');
+    }
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content name-modal">
+        <h2 style={{ color: '#2563eb' }}>🔒 Acceso</h2>
+        <p>Ingrese la contraseña para acceder:</p>
+        <div className="password-wrapper">
+          <input 
+            type={showPwd ? 'text' : 'password'}
+            value={password} 
+            onChange={(e) => { setPassword(e.target.value); setError(''); }}
+            placeholder="Contraseña"
+            className="name-modal-input"
+            autoFocus
+            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+          />
+          <button 
+            type="button" 
+            className="toggle-pwd-btn"
+            onClick={() => setShowPwd(!showPwd)}
+          >
+            {showPwd ? '🙈' : '👁️'}
+          </button>
+        </div>
+        {error && <p style={{ color: '#ef4444', fontSize: '13px', margin: '5px 0' }}>{error}</p>}
+        <button 
+          onClick={handleSubmit}
+          style={{ background: '#2563eb', color: 'white' }}
+        >
+          Entrar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Modal para pedir el nombre al entrar
 function NameModal({ onSubmit }) {
   const [name, setName] = useState(localStorage.getItem('userName') || '');
@@ -190,6 +239,7 @@ function NameModal({ onSubmit }) {
           placeholder="Su nombre"
           className="name-modal-input"
           autoFocus
+          onKeyDown={(e) => e.key === 'Enter' && name.trim() && (() => { localStorage.setItem('userName', name.trim()); onSubmit(name.trim()); })()}
         />
         <button 
           onClick={() => {
@@ -201,7 +251,7 @@ function NameModal({ onSubmit }) {
           disabled={!name.trim()}
           style={name.trim() ? { background: '#2563eb', color: 'white' } : {}}
         >
-          Entrar
+          Continuar
         </button>
       </div>
     </div>
@@ -278,7 +328,8 @@ function MapComponent() {
   const [territories, setTerritories] = useState([]);
   const [currentZoom, setCurrentZoom] = useState(16);
   const [userName, setUserName] = useState('');
-  const [showNameModal, setShowNameModal] = useState(true);
+  const [showPassword, setShowPassword] = useState(true);
+  const [showNameModal, setShowNameModal] = useState(false);
   const [activityLog, setActivityLog] = useState([]);
   const [showLogPanel, setShowLogPanel] = useState(false);
   const [nameEdit, setNameEdit] = useState('');
@@ -321,7 +372,17 @@ function MapComponent() {
     return completedCount;
   };
 
-  // Si el modal de nombre está activo, mostrarlo
+  // Pantalla de contraseña
+  if (showPassword) {
+    return (
+      <PasswordModal onSuccess={() => {
+        setShowPassword(false);
+        setShowNameModal(true);
+      }} />
+    );
+  }
+
+  // Modal de nombre
   if (showNameModal) {
     return (
       <NameModal onSubmit={(name) => {
@@ -442,7 +503,7 @@ function MapComponent() {
                                 className={`side-btn ${isDone ? 'done' : ''}`}
                                 onClick={() => togglePart(territory.territorio_id, block.id, i, partStates[id])}
                               >
-                                Lado ${i + 1} {isDone ? '✓' : ''}
+                                Cara {i + 1} {isDone ? '✓' : ''}
                               </button>
                             );
                           })}
