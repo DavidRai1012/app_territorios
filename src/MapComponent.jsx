@@ -131,7 +131,7 @@ function ClearAllButton({ onConfirm }) {
             boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
           }}
         >
-          🗑️ Limpiar
+          Limpiar
         </button>
       </div>
 
@@ -191,7 +191,7 @@ function PasswordModal({ onSuccess }) {
   return (
     <div className="modal-overlay">
       <div className="modal-content name-modal">
-        <h2 style={{ color: '#2563eb' }}>🔒 Acceso</h2>
+        <h2 style={{ color: '#2563eb' }}>Acceso Restringido</h2>
         <p>Ingrese la contraseña para acceder:</p>
         <div className="password-wrapper">
           <input 
@@ -208,7 +208,7 @@ function PasswordModal({ onSuccess }) {
             className="toggle-pwd-btn"
             onClick={() => setShowPwd(!showPwd)}
           >
-            {showPwd ? '🙈' : '👁️'}
+            {showPwd ? 'Ocultar' : 'Ver'}
           </button>
         </div>
         {error && <p style={{ color: '#ef4444', fontSize: '13px', margin: '5px 0' }}>{error}</p>}
@@ -230,7 +230,7 @@ function NameModal({ onSubmit }) {
   return (
     <div className="modal-overlay">
       <div className="modal-content name-modal">
-        <h2 style={{ color: '#2563eb' }}>👋 Bienvenido</h2>
+        <h2 style={{ color: '#2563eb' }}>Bienvenido</h2>
         <p>Ingrese su nombre para registrar los cambios que realice:</p>
         <input 
           type="text" 
@@ -574,8 +574,8 @@ function MapComponent() {
       <div className="user-name-bar">
         {!editingName ? (
           <>
-            <span>👤 {userName}</span>
-            <button className="name-edit-btn" onClick={() => { setEditingName(true); setNameEdit(userName); }}>✏️</button>
+            <span>Usuario: {userName}</span>
+            <button className="name-edit-btn" onClick={() => { setEditingName(true); setNameEdit(userName); }}>Editar</button>
           </>
         ) : (
           <>

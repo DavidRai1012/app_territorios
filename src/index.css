@@ -264,11 +264,19 @@ body, html, #root {
   right: 8px;
   background: none !important;
   border: none !important;
-  font-size: 20px;
+  font-size: 11px;
   cursor: pointer;
-  padding: 4px !important;
+  padding: 4px 6px !important;
   margin: 0 !important;
   box-shadow: none !important;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.toggle-pwd-btn:hover {
+  color: #2563eb;
 }
 
 /* ============ User name bar (bottom) ============ */
