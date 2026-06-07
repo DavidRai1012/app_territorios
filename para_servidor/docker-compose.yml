@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data.json:/app/data.json
+      - ./data/mapas:/app/data/mapas
+      - ./activity_log.json:/app/activity_log.json
+    restart: unless-stopped
