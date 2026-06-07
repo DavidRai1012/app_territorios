@@ -30,30 +30,27 @@ function ZoomTracker({ onZoomChange }) {
 
 // Componente para la marca de agua dinámica
 function TerritoryWatermark({ territory, currentZoom }) {
-  if (!territory || !territory.limites) return null;
+  if (!territory || !territory.limites || territory.limites.length === 0) return null;
+
+  // Calculamos el centro aproximado del territorio
+  let latSum = 0, lngSum = 0;
+  territory.limites.forEach(p => { latSum += p[0]; lngSum += p[1]; });
+  const centerLat = latSum / territory.limites.length;
+  const centerLng = lngSum / territory.limites.length;
+  const center = [centerLat, centerLng];
 
   const opacity = currentZoom <= 16 ? 1 : 0.15;
-  const fontSize = currentZoom <= 16 ? "40" : "20"; 
+  const fontSize = currentZoom <= 16 ? '5rem' : '3rem';
 
-  const bounds = L.latLngBounds(territory.limites);
+  const icon = L.divIcon({
+    className: 'territory-watermark-icon',
+    html: `<div style="font-size: ${fontSize}; font-weight: 900; color: rgba(0,0,0,${opacity}); text-shadow: 2px 2px 4px rgba(255,255,255,0.8); user-select: none; transition: all 0.3s; text-align: center; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;">${territory.numero_territorio}</div>`,
+    iconSize: [200, 200],
+    iconAnchor: [100, 100]
+  });
 
   return (
-    <SVGOverlay bounds={bounds} zIndexOffset={currentZoom <= 16 ? 100 : -100}>
-      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <text 
-          x="50%" 
-          y="50%" 
-          dominantBaseline="middle" 
-          textAnchor="middle" 
-          fontSize={fontSize}
-          fontWeight="900" 
-          fill={`rgba(0,0,0,${opacity})`}
-          style={{ userSelect: 'none', transition: 'all 0.3s', textShadow: '2px 2px 4px rgba(255,255,255,0.8)' }}
-        >
-          {territory.numero_territorio}
-        </text>
-      </svg>
-    </SVGOverlay>
+    <Marker position={center} icon={icon} interactive={false} zIndexOffset={currentZoom <= 16 ? 100 : -100} />
   );
 }
 

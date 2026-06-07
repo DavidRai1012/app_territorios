@@ -49,7 +49,20 @@ function loadTerritories() {
 }
 
 function loadActivityLog() {
-  try { return JSON.parse(fs.readFileSync(logFile, 'utf8')); }
+  try {
+    const rawLog = JSON.parse(fs.readFileSync(logFile, 'utf8'));
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    
+    const filteredLog = rawLog.filter(entry => new Date(entry.date) >= threeMonthsAgo);
+    
+    // Guardar si se filtraron elementos antiguos
+    if (filteredLog.length < rawLog.length) {
+      fs.writeFileSync(logFile, JSON.stringify(filteredLog, null, 2));
+    }
+    
+    return filteredLog;
+  }
   catch (e) { return []; }
 }
 

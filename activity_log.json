@@ -1,1 +1,23 @@
-[]
+[
+  {
+    "type": "completar_manzana",
+    "userName": "David",
+    "date": "2026-06-07T03:55:12.994Z",
+    "territoryNum": "13",
+    "blockNum": "1"
+  },
+  {
+    "type": "completar_manzana",
+    "userName": "David",
+    "date": "2026-06-07T03:55:25.192Z",
+    "territoryNum": "13",
+    "blockNum": "2"
+  },
+  {
+    "type": "territorio_completo",
+    "userName": "David",
+    "date": "2026-06-07T03:55:25.192Z",
+    "territoryNum": "13",
+    "blockNum": null
+  }
+]
