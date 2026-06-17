@@ -434,12 +434,10 @@ function MapComponent() {
               if (businessLayerActive && businessCount === 0) return null;
 
               // En la vista normal
+              const isFullyCompletedNormal = normalCount > 0 && normalCompletedCount === normalCount;
+              const isPartiallyCompletedNormal = normalCompletedCount > 0 && normalCompletedCount < normalCount;
               let fillColor = isFullyCompletedNormal ? '#22c55e' : isPartiallyCompletedNormal ? '#fbbf24' : '#3b82f6';
-              let fillOpacity = isFullyCompletedNormal ? 0.6 : isPartiallyCompletedNormal ? 0.4 : 0.0;
-              if (normalCount === 0) {
-                fillColor = '#3b82f6';
-                fillOpacity = 0.0;
-              }
+              let fillOpacity = 0.0;
 
               // Relleno para capa de negocios: SIN RELLENO
               if (businessLayerActive) {
