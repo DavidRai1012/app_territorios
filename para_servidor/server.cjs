@@ -57,14 +57,21 @@ function saveActivityLog(log) {
   fs.writeFileSync(logFile, JSON.stringify(log, null, 2));
 }
 
-// Calcula el estado de una manzana: 'none', 'partial', 'complete'
+// Calcula el estado de una manzana basado SOLO en caras normales: 'none', 'partial', 'complete'
 function getBlockState(states, territoryId, blockId, numSides) {
-  let completed = 0;
+  let normalCompleted = 0;
+  let normalCount = 0;
   for (let i = 0; i < numSides; i++) {
-    if (states[`${territoryId}_${blockId}_p${i}`] === 'completed') completed++;
+    const faceId = `${territoryId}_${blockId}_p${i}`;
+    const isBusiness = states[`type_${faceId}`] === 'business';
+    if (!isBusiness) {
+      normalCount++;
+      if (states[faceId] === 'completed') normalCompleted++;
+    }
   }
-  if (completed === 0) return 'none';
-  if (completed === numSides) return 'complete';
+  if (normalCount === 0) return 'none'; // Si no tiene caras normales
+  if (normalCompleted === 0) return 'none';
+  if (normalCompleted === normalCount) return 'complete';
   return 'partial';
 }
 
@@ -161,6 +168,31 @@ io.on('connection', (socket) => {
     io.emit('part_updated', { id, status });
 
     // Programar verificación de cambio de estado (con debounce)
+    if (block) {
+      scheduleBlockCheck(territory_id, block_id, prevState, userName);
+    }
+  });
+
+  socket.on('update_face_type', ({ id, type, territory_id, block_id, userName }) => {
+    const currentStates = loadPartStates();
+    
+    // Guardar estado previo para la verificación
+    const territories = loadTerritories();
+    const territory = territories.find(t => t.territorio_id === territory_id);
+    const block = territory ? territory.manzanas.find(b => b.id === block_id) : null;
+    const key = `${territory_id}_${block_id}`;
+    let prevState = 'none';
+    if (block && !pendingChecks[key]) {
+      prevState = getBlockState(currentStates, territory_id, block_id, block.puntos.length);
+    } else if (pendingChecks[key]) {
+      prevState = pendingChecks[key].prevState;
+    }
+
+    currentStates[`type_${id}`] = type;
+    savePartStates(currentStates);
+    io.emit('face_type_updated', { id, type });
+
+    // Programar verificación porque al cambiar el tipo, puede completarse la manzana (si las normales restantes ya estaban completas)
     if (block) {
       scheduleBlockCheck(territory_id, block_id, prevState, userName);
     }

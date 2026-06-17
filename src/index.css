@@ -136,6 +136,18 @@ body, html, #root {
   color: #16a34a;
 }
 
+.type-toggle-btn {
+  border: 1px solid #cbd5e1;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+.type-toggle-btn:hover {
+  opacity: 0.8;
+}
+
 .complete-all-btn {
   width: 100%;
   padding: 10px;
@@ -349,6 +361,22 @@ body, html, #root {
   background: #f1f5f9;
 }
 
+.icon-btn {
+  padding: 10px 14px;
+  background: white;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background: #f1f5f9;
+}
+
 /* ============ Log panel ============ */
 .log-panel-overlay {
   position: fixed;
@@ -466,6 +494,22 @@ body, html, #root {
   border-radius: 8px;
   border-bottom: none;
   margin-bottom: 4px;
+}
+
+.docx-btn {
+  width: 100%;
+  padding: 10px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.docx-btn:hover {
+  background: #1d4ed8;
 }
 
 /* ============ Responsive ============ */

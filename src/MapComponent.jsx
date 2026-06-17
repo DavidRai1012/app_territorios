@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Polygon, Polyline, Popup, Marker, useMap, SVGOverlay, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import io from 'socket.io-client';
+import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType, VerticalAlign } from 'docx';
+import { saveAs } from 'file-saver';
 
 const socket = io(import.meta.env.DEV ? 'http://localhost:3000' : '/');
 
-// Componente para ajustar la vista del mapa cuando llegan los datos
 function MapBoundsFitter({ territories }) {
   const map = useMap();
   useEffect(() => {
@@ -17,7 +18,6 @@ function MapBoundsFitter({ territories }) {
   return null;
 }
 
-// Componente para rastrear el zoom globalmente
 function ZoomTracker({ onZoomChange }) {
   const map = useMapEvents({
     zoomend: () => onZoomChange(map.getZoom())
@@ -28,7 +28,6 @@ function ZoomTracker({ onZoomChange }) {
   return null;
 }
 
-// Componente para la marca de agua dinámica
 function TerritoryWatermark({ territory, currentZoom }) {
   if (!territory || !territory.limites) return null;
 
@@ -75,15 +74,7 @@ function UserLocation() {
       <div style={{ position: 'absolute', top: 15, right: 15, zIndex: 1000 }}>
         <button 
           onClick={() => map.locate()}
-          style={{ 
-            padding: '10px 15px', 
-            background: 'white', 
-            border: '2px solid rgba(0,0,0,0.2)', 
-            borderRadius: '8px', 
-            cursor: 'pointer', 
-            fontSize: '20px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-          }}
+          className="icon-btn"
           title="Mi ubicación"
         >
           📍
@@ -110,26 +101,12 @@ function ClearAllButton({ onConfirm }) {
     return () => clearTimeout(timer);
   }, [step, countdown]);
 
-  const handleStart = () => {
-    setStep(1);
-    setCountdown(15);
-  };
-
   return (
     <>
       <div style={{ position: 'absolute', top: 15, left: 15, zIndex: 1000 }}>
         <button 
-          onClick={handleStart} 
-          style={{ 
-            padding: '10px 15px', 
-            background: 'white', 
-            border: '2px solid red', 
-            borderRadius: '8px', 
-            cursor: 'pointer', 
-            color: 'red', 
-            fontWeight: 'bold',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-          }}
+          onClick={() => { setStep(1); setCountdown(15); }} 
+          style={{ padding: '10px 15px', background: 'white', border: '2px solid red', borderRadius: '8px', cursor: 'pointer', color: 'red', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}
         >
           Limpiar
         </button>
@@ -140,11 +117,7 @@ function ClearAllButton({ onConfirm }) {
           <div className="modal-content">
             <h2>¿Seguro que quiere limpiar todas las manzanas?</h2>
             <p>Esta acción borrará el progreso de todos los territorios. Por favor espere {countdown} segundos para confirmar.</p>
-            <button 
-              disabled={countdown > 0} 
-              onClick={() => setStep(2)}
-              style={countdown === 0 ? { background: '#ef4444', color: 'white' } : {}}
-            >
+            <button disabled={countdown > 0} onClick={() => setStep(2)} style={countdown === 0 ? { background: '#ef4444', color: 'white' } : {}}>
               {countdown > 0 ? `Esperar ${countdown}s` : 'Continuar'}
             </button>
             <button onClick={() => setStep(0)}>Cancelar</button>
@@ -157,13 +130,7 @@ function ClearAllButton({ onConfirm }) {
           <div className="modal-content">
             <h2>ÚLTIMA ADVERTENCIA</h2>
             <p>Oprima el botón rojo para limpiar TODAS las manzanas.</p>
-            <button 
-              style={{ background: 'red', color: 'white', fontWeight: 'bold' }}
-              onClick={() => {
-                onConfirm();
-                setStep(0);
-              }}
-            >
+            <button style={{ background: 'red', color: 'white', fontWeight: 'bold' }} onClick={() => { onConfirm(); setStep(0); }}>
               Borrar Todo Definitivamente
             </button>
             <button onClick={() => setStep(0)}>Cancelar</button>
@@ -174,18 +141,14 @@ function ClearAllButton({ onConfirm }) {
   );
 }
 
-// Modal para pedir la contraseña
 function PasswordModal({ onSuccess }) {
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = () => {
-    if (password === 'Sal8318') {
-      onSuccess();
-    } else {
-      setError('Contraseña incorrecta');
-    }
+    if (password === 'Sal8318') onSuccess();
+    else setError('Contraseña incorrecta');
   };
 
   return (
@@ -195,62 +158,32 @@ function PasswordModal({ onSuccess }) {
         <p>Ingrese la contraseña para acceder:</p>
         <div className="password-wrapper">
           <input 
-            type={showPwd ? 'text' : 'password'}
-            value={password} 
-            onChange={(e) => { setPassword(e.target.value); setError(''); }}
-            placeholder="Contraseña"
-            className="name-modal-input"
-            autoFocus
-            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+            type={showPwd ? 'text' : 'password'} value={password} onChange={(e) => { setPassword(e.target.value); setError(''); }}
+            placeholder="Contraseña" className="name-modal-input" autoFocus onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
           />
-          <button 
-            type="button" 
-            className="toggle-pwd-btn"
-            onClick={() => setShowPwd(!showPwd)}
-          >
+          <button type="button" className="toggle-pwd-btn" onClick={() => setShowPwd(!showPwd)}>
             {showPwd ? 'Ocultar' : 'Ver'}
           </button>
         </div>
         {error && <p style={{ color: '#ef4444', fontSize: '13px', margin: '5px 0' }}>{error}</p>}
-        <button 
-          onClick={handleSubmit}
-          style={{ background: '#2563eb', color: 'white' }}
-        >
-          Entrar
-        </button>
+        <button onClick={handleSubmit} style={{ background: '#2563eb', color: 'white' }}>Entrar</button>
       </div>
     </div>
   );
 }
 
-// Modal para pedir el nombre al entrar
 function NameModal({ onSubmit }) {
   const [name, setName] = useState(localStorage.getItem('userName') || '');
-  
   return (
     <div className="modal-overlay">
       <div className="modal-content name-modal">
         <h2 style={{ color: '#2563eb' }}>Bienvenido</h2>
         <p>Ingrese su nombre para registrar los cambios que realice:</p>
         <input 
-          type="text" 
-          value={name} 
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Su nombre"
-          className="name-modal-input"
-          autoFocus
-          onKeyDown={(e) => e.key === 'Enter' && name.trim() && (() => { localStorage.setItem('userName', name.trim()); onSubmit(name.trim()); })()}
+          type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Su nombre"
+          className="name-modal-input" autoFocus onKeyDown={(e) => e.key === 'Enter' && name.trim() && (() => { localStorage.setItem('userName', name.trim()); onSubmit(name.trim()); })()}
         />
-        <button 
-          onClick={() => {
-            if (name.trim()) {
-              localStorage.setItem('userName', name.trim());
-              onSubmit(name.trim());
-            }
-          }}
-          disabled={!name.trim()}
-          style={name.trim() ? { background: '#2563eb', color: 'white' } : {}}
-        >
+        <button onClick={() => { if (name.trim()) { localStorage.setItem('userName', name.trim()); onSubmit(name.trim()); } }} disabled={!name.trim()} style={name.trim() ? { background: '#2563eb', color: 'white' } : {}}>
           Continuar
         </button>
       </div>
@@ -258,39 +191,93 @@ function NameModal({ onSubmit }) {
   );
 }
 
-// Formatea fecha ISO a formato legible
-function formatDate(isoDate) {
-  const d = new Date(isoDate);
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
-  const hours = String(d.getHours()).padStart(2, '0');
-  const mins = String(d.getMinutes()).padStart(2, '0');
-  return `${day}/${month}/${year} ${hours}:${mins}`;
+function DocxModal({ onClose, onGenerate }) {
+  const [monthYear, setMonthYear] = useState('');
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <h2>Descargar Registro DOCX</h2>
+        <p>Ingrese el Mes y Año (o "Año de servicio"):</p>
+        <input 
+          type="text" 
+          className="name-modal-input"
+          value={monthYear} 
+          onChange={(e) => setMonthYear(e.target.value)} 
+          placeholder="Ej: Septiembre 2026" 
+          autoFocus 
+        />
+        <button style={{ background: '#2563eb', color: 'white', marginTop: 10 }} onClick={() => { onGenerate(monthYear); onClose(); }}>Generar DOCX</button>
+        <button onClick={onClose}>Cancelar</button>
+      </div>
+    </div>
+  );
 }
 
-// Devuelve emoji y texto según el tipo de evento
-function getLogLabel(entry) {
-  switch (entry.type) {
-    case 'completar_manzana':
-      return { emoji: '🟢', text: `Completar manzana ${entry.blockNum}` };
-    case 'parcial_manzana':
-      return { emoji: '🟡', text: `Realizar parcial manzana ${entry.blockNum}` };
-    case 'terminar_parcial':
-      return { emoji: '✅', text: `Terminar parcial manzana ${entry.blockNum}` };
-    case 'territorio_completo':
-      return { emoji: '🏆', text: `¡Territorio ${entry.territoryNum} COMPLETADO!` };
-    case 'limpiar_todo':
-      return { emoji: '🗑️', text: 'Limpiar todo' };
-    default:
-      return { emoji: '📝', text: 'Cambio' };
-  }
-}
+const generateDocx = async (monthYear) => {
+  const cellMargins = { top: 100, bottom: 100, left: 100, right: 100 };
+  
+  const createRows = (start, end) => {
+    const rows = [];
+    rows.push(
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ text: "Núm.\nde terr.", alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER, margins: cellMargins }),
+          new TableCell({ children: [new Paragraph({ text: "Última fecha\nen que se\ncompletó*", alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER, margins: cellMargins }),
+          ...Array(4).fill(null).map(() => new TableCell({ children: [new Paragraph({ text: "Asignado a", alignment: AlignmentType.CENTER })], columnSpan: 2, margins: cellMargins })),
+        ]
+      }),
+      new TableRow({
+        children: [
+          ...Array(8).fill(null).map((_, i) => new TableCell({ children: [new Paragraph({ text: i % 2 === 0 ? "Fecha en que\nse asignó" : "Fecha en que\nse completó", alignment: AlignmentType.CENTER })], margins: cellMargins }))
+        ]
+      })
+    );
+    for (let i = start; i <= end; i++) {
+      rows.push(
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ text: i.toString(), alignment: AlignmentType.CENTER })], margins: cellMargins }),
+            new TableCell({ children: [new Paragraph("")] }),
+            ...Array(8).fill(null).map(() => new TableCell({ children: [new Paragraph("")] }))
+          ]
+        })
+      );
+    }
+    return rows;
+  };
 
-// Panel del registro de actividad
-function LogPanel({ log, onClose }) {
+  const table1 = new Table({ rows: createRows(1, 20), width: { size: 100, type: WidthType.PERCENTAGE } });
+  const table2 = new Table({ rows: createRows(21, 37), width: { size: 100, type: WidthType.PERCENTAGE } });
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children: [
+          new Paragraph({ children: [new TextRun({ text: "REGISTRO DE ASIGNACIÓN DE TERRITORIO", bold: true, size: 28 })], alignment: AlignmentType.CENTER, spacing: { after: 200 } }),
+          new Paragraph({ children: [new TextRun({ text: `Año de servicio: ${monthYear}`, bold: true, size: 24 })], spacing: { after: 200 } }),
+          table1,
+          new Paragraph({ text: "*Cuando comience una nueva página, anote en esta columna la última fecha en que los territorios se completaron.", spacing: { before: 100 } }),
+        ]
+      },
+      {
+        properties: {},
+        children: [
+          new Paragraph({ children: [new TextRun({ text: "REGISTRO DE ASIGNACIÓN DE TERRITORIO", bold: true, size: 28 })], alignment: AlignmentType.CENTER, spacing: { after: 200 } }),
+          new Paragraph({ children: [new TextRun({ text: `Año de servicio: ${monthYear}`, bold: true, size: 24 })], spacing: { after: 200 } }),
+          table2,
+          new Paragraph({ text: "*Cuando comience una nueva página, anote en esta columna la última fecha en que los territorios se completaron.", spacing: { before: 100 } }),
+        ]
+      }
+    ]
+  });
+
+  const blob = await Packer.toBlob(doc);
+  saveAs(blob, `Registro_Territorios_${monthYear}.docx`);
+};
+
+function LogPanel({ log, onClose, onDownloadDocx }) {
   const reversed = [...log].reverse();
-
   return (
     <div className="log-panel-overlay" onClick={onClose}>
       <div className="log-panel" onClick={(e) => e.stopPropagation()}>
@@ -298,21 +285,21 @@ function LogPanel({ log, onClose }) {
           <h3>📋 Registro de Actividad</h3>
           <button className="log-close-btn" onClick={onClose}>✕</button>
         </div>
+        <div style={{ padding: '10px' }}>
+          <button onClick={onDownloadDocx} className="docx-btn">📄 Descargar Registro DOCX</button>
+        </div>
         <div className="log-panel-body">
           {reversed.length === 0 && <p className="log-empty">No hay actividad registrada aún.</p>}
           {reversed.map((entry, i) => {
-            const { emoji, text } = getLogLabel(entry);
+            const emoji = entry.type === 'completar_manzana' ? '🟢' : entry.type === 'parcial_manzana' ? '🟡' : entry.type === 'terminar_parcial' ? '✅' : entry.type === 'territorio_completo' ? '🏆' : entry.type === 'limpiar_todo' ? '🗑️' : '📝';
+            const text = entry.type === 'completar_manzana' ? `Completar manzana ${entry.blockNum}` : entry.type === 'parcial_manzana' ? `Realizar parcial manzana ${entry.blockNum}` : entry.type === 'terminar_parcial' ? `Terminar parcial manzana ${entry.blockNum}` : entry.type === 'territorio_completo' ? `¡Territorio ${entry.territoryNum} COMPLETADO!` : entry.type === 'limpiar_todo' ? 'Limpiar todo' : 'Cambio';
             return (
               <div key={i} className={`log-entry log-type-${entry.type}`}>
                 <span className="log-emoji">{emoji}</span>
                 <div className="log-info">
                   <strong>{text}</strong>
-                  {entry.territoryNum && entry.type !== 'territorio_completo' && (
-                    <span className="log-territory"> (Territorio {entry.territoryNum})</span>
-                  )}
-                  <div className="log-meta">
-                    {entry.userName} — {formatDate(entry.date)}
-                  </div>
+                  {entry.territoryNum && entry.type !== 'territorio_completo' && <span className="log-territory"> (Territorio {entry.territoryNum})</span>}
+                  <div className="log-meta">{entry.userName} — {new Date(entry.date).toLocaleString()}</div>
                 </div>
               </div>
             );
@@ -330,10 +317,14 @@ function MapComponent() {
   const [userName, setUserName] = useState('');
   const [showPassword, setShowPassword] = useState(true);
   const [showNameModal, setShowNameModal] = useState(false);
+  const [showDocxModal, setShowDocxModal] = useState(false);
   const [activityLog, setActivityLog] = useState([]);
   const [showLogPanel, setShowLogPanel] = useState(false);
   const [nameEdit, setNameEdit] = useState('');
   const [editingName, setEditingName] = useState(false);
+  
+  // Capa de negocios
+  const [businessLayerActive, setBusinessLayerActive] = useState(false);
 
   useEffect(() => {
     socket.on('initial_state', (data) => {
@@ -341,19 +332,16 @@ function MapComponent() {
       setTerritories(data.territories || []);
       if (data.activityLog) setActivityLog(data.activityLog);
     });
-
     socket.on('part_updated', ({ id, status }) => {
       setPartStates(prev => ({ ...prev, [id]: status }));
     });
-
-    socket.on('activity_log', (log) => {
-      setActivityLog(log);
+    socket.on('face_type_updated', ({ id, type }) => {
+      setPartStates(prev => ({ ...prev, [`type_${id}`]: type }));
     });
+    socket.on('activity_log', (log) => setActivityLog(log));
 
     return () => {
-      socket.off('initial_state');
-      socket.off('part_updated');
-      socket.off('activity_log');
+      socket.off('initial_state'); socket.off('part_updated'); socket.off('face_type_updated'); socket.off('activity_log');
     };
   }, []);
 
@@ -364,213 +352,221 @@ function MapComponent() {
     socket.emit('update_part', { id, territory_id: territoryId, block_id: blockId, part_index: partIndex, status: newStatus, userName });
   };
 
-  const getBlockStatus = (territoryId, blockId, numSides) => {
-    let completedCount = 0;
-    for (let i = 0; i < numSides; i++) {
-      if (partStates[`${territoryId}_${blockId}_p${i}`] === 'completed') completedCount++;
-    }
-    return completedCount;
+  const toggleFaceType = (territoryId, blockId, partIndex, currentType) => {
+    const id = `${territoryId}_${blockId}_p${partIndex}`;
+    const newType = currentType === 'business' ? 'normal' : 'business';
+    setPartStates(prev => ({ ...prev, [`type_${id}`]: newType }));
+    socket.emit('update_face_type', { id, type: newType, territory_id: territoryId, block_id: blockId, userName });
   };
 
-  // Pantalla de contraseña
-  if (showPassword) {
-    return (
-      <PasswordModal onSuccess={() => {
-        setShowPassword(false);
-        setShowNameModal(true);
-      }} />
-    );
-  }
-
-  // Modal de nombre
-  if (showNameModal) {
-    return (
-      <NameModal onSubmit={(name) => {
-        setUserName(name);
-        setNameEdit(name);
-        setShowNameModal(false);
-      }} />
-    );
-  }
+  if (showPassword) return <PasswordModal onSuccess={() => { setShowPassword(false); setShowNameModal(true); }} />;
+  if (showNameModal) return <NameModal onSubmit={(name) => { setUserName(name); setNameEdit(name); setShowNameModal(false); }} />;
+  if (showDocxModal) return <DocxModal onClose={() => setShowDocxModal(false)} onGenerate={generateDocx} />;
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <MapContainer 
-        center={[4.7425, -74.090]}
-        zoom={16} 
-        minZoom={14}
-        maxZoom={22}
-        style={{ width: '100%', height: '100%', zIndex: 1 }}
-        zoomControl={false}
-      >
-        <TileLayer
-          attribution='&copy; OpenStreetMap'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maxNativeZoom={19}
-        />
-        
+      <MapContainer center={[4.7425, -74.090]} zoom={16} minZoom={14} maxZoom={22} style={{ width: '100%', height: '100%', zIndex: 1 }} zoomControl={false}>
+        <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxNativeZoom={19} />
         <ZoomTracker onZoomChange={setCurrentZoom} />
         <MapBoundsFitter territories={territories} />
         <UserLocation />
 
         {territories.map(territory => {
-          // Calculamos el estado general del territorio
-          let totalParts = 0;
-          let completedParts = 0;
+          let totalNormalParts = 0;
+          let completedNormalParts = 0;
           
           if (territory.manzanas) {
             territory.manzanas.forEach(block => {
               const numSides = block.puntos.length;
-              totalParts += numSides;
               for (let i = 0; i < numSides; i++) {
-                if (partStates[`${territory.territorio_id}_${block.id}_p${i}`] === 'completed') {
-                  completedParts++;
+                const isBusiness = partStates[`type_${territory.territorio_id}_${block.id}_p${i}`] === 'business';
+                if (!isBusiness) {
+                  totalNormalParts++;
+                  if (partStates[`${territory.territorio_id}_${block.id}_p${i}`] === 'completed') completedNormalParts++;
                 }
               }
             });
           }
 
-          // Determinamos el color del contorno del territorio
           let territoryColor = 'rgba(0,0,0,0.4)';
-          if (completedParts > 0 && completedParts < totalParts) {
-            territoryColor = '#eab308';
-          } else if (completedParts === totalParts && totalParts > 0) {
-            territoryColor = '#22c55e';
-          }
+          if (completedNormalParts > 0 && completedNormalParts < totalNormalParts) territoryColor = '#eab308';
+          else if (completedNormalParts === totalNormalParts && totalNormalParts > 0) territoryColor = '#22c55e';
 
           return (
           <React.Fragment key={territory.territorio_id}>
-            
             <TerritoryWatermark territory={territory} currentZoom={currentZoom} />
 
-            {/* Borde del territorio */}
-            {territory.limites && territory.limites.length >= 3 && (
-               <Polygon 
-                 positions={territory.limites}
-                 pathOptions={{ 
-                   color: territoryColor, 
-                   weight: currentZoom <= 16 ? 5 : 3, 
-                   fill: currentZoom <= 16,
-                   fillColor: territoryColor,
-                   fillOpacity: 0.2,
-                   dashArray: '5, 5',
-                   opacity: 0.9
-                 }}
-                 interactive={false}
-               />
+            {/* Borde del territorio, se oculta un poco si la capa de negocios está activa */}
+            {territory.limites && territory.limites.length >= 3 && !businessLayerActive && (
+               <Polygon positions={territory.limites} pathOptions={{ color: territoryColor, weight: currentZoom <= 16 ? 5 : 3, fill: currentZoom <= 16, fillColor: territoryColor, fillOpacity: 0.2, dashArray: '5, 5', opacity: 0.9 }} interactive={false} />
             )}
 
-            {/* Solo renderizamos las manzanas si el zoom es lo suficientemente cerca (> 16) */}
             {currentZoom > 16 && territory.manzanas.map(block => {
               const numSides = block.puntos.length;
-              const completedCount = getBlockStatus(territory.territorio_id, block.id, numSides);
-              const isFullyCompleted = completedCount === numSides;
-              const isPartiallyCompleted = completedCount > 0 && completedCount < numSides;
+              let normalCount = 0;
+              let normalCompletedCount = 0;
+              let businessCount = 0;
+              let businessCompletedCount = 0;
 
-              const fillColor = isFullyCompleted ? '#22c55e' : isPartiallyCompleted ? '#fbbf24' : '#3b82f6';
-              const fillOpacity = isFullyCompleted ? 0.6 : isPartiallyCompleted ? 0.4 : 0.0;
+              for (let i = 0; i < numSides; i++) {
+                const id = `${territory.territorio_id}_${block.id}_p${i}`;
+                const isBusiness = partStates[`type_${id}`] === 'business';
+                const isDone = partStates[id] === 'completed';
+                if (isBusiness) {
+                  businessCount++;
+                  if (isDone) businessCompletedCount++;
+                } else {
+                  normalCount++;
+                  if (isDone) normalCompletedCount++;
+                }
+              }
 
-              // Para el número en el centro de la manzana
+              // Color del maletín
+              let bagColor = '#9ca3af'; // Gris
+              if (businessCount > 0) {
+                if (businessCompletedCount === businessCount) bagColor = '#3b82f6'; // Azul
+                else if (businessCompletedCount > 0) bagColor = '#f97316'; // Naranja
+              }
+
+              // Si estamos en la capa de negocios y no hay negocios, ocultamos la manzana
+              if (businessLayerActive && businessCount === 0) return null;
+
+              // Relleno normal (basado SOLO en caras normales)
+              const isFullyCompletedNormal = normalCount > 0 && normalCompletedCount === normalCount;
+              const isPartiallyCompletedNormal = normalCompletedCount > 0 && normalCompletedCount < normalCount;
+              let fillColor = isFullyCompletedNormal ? '#22c55e' : isPartiallyCompletedNormal ? '#fbbf24' : '#3b82f6';
+              let fillOpacity = isFullyCompletedNormal ? 0.6 : isPartiallyCompletedNormal ? 0.4 : 0.0;
+              if (normalCount === 0) {
+                fillColor = '#3b82f6';
+                fillOpacity = 0.0;
+              }
+
+              // Relleno para capa de negocios
+              if (businessLayerActive) {
+                fillColor = bagColor;
+                fillOpacity = 0.8;
+              }
+
               const blockCenter = L.latLngBounds(block.puntos).getCenter();
+              const bagHtml = businessCount > 0 ? `<div style="background:${bagColor}; color:white; border-radius:3px; padding:2px; font-size:12px; margin-top:2px;">👔</div>` : '';
               const blockIcon = L.divIcon({
                 className: 'block-number-label',
-                html: `<span>${block.numero}</span>`,
-                iconSize: [24, 24],
+                html: `<div style="display:flex; flex-direction:column; align-items:center;"><span>${block.numero}</span>${!businessLayerActive ? bagHtml : ''}</div>`,
+                iconSize: [24, 40],
                 iconAnchor: [12, 12]
               });
 
+              // Determinar si mostrar bordes en la capa de negocios (solo si es naranja)
+              const showBordersInBusinessLayer = bagColor === '#f97316';
+
               return (
                 <React.Fragment key={block.id}>
-                  {/* Número en el centro (siempre visible) */}
                   <Marker position={blockCenter} icon={blockIcon} interactive={false} />
 
-                  {/* Polígono de relleno */}
-                  <Polygon 
-                    positions={block.puntos}
-                    pathOptions={{ stroke: false, fillColor, fillOpacity }}
-                  >
+                  <Polygon positions={block.puntos} pathOptions={{ stroke: false, fillColor, fillOpacity }} interactive={!businessLayerActive}>
                     <Popup>
                       <div className="popup-content">
                         <h3>Manzana {block.numero}</h3>
-                        <p>Progreso: {completedCount}/{numSides} lados</p>
+                        <p>Normales: {normalCompletedCount}/{normalCount} | Negocios: {businessCompletedCount}/{businessCount}</p>
                         <div className="sides-grid">
                           {block.puntos.map((_, i) => {
                             const id = `${territory.territorio_id}_${block.id}_p${i}`;
                             const isDone = partStates[id] === 'completed';
+                            const isBusiness = partStates[`type_${id}`] === 'business';
                             return (
-                              <button 
-                                key={i} 
-                                className={`side-btn ${isDone ? 'done' : ''}`}
-                                onClick={() => togglePart(territory.territorio_id, block.id, i, partStates[id])}
-                              >
-                                Cara {i + 1} {isDone ? '✓' : ''}
-                              </button>
+                              <div key={i} style={{ display: 'flex', gap: '5px' }}>
+                                <button className={`side-btn ${isDone ? 'done' : ''}`} style={{ flex: 1, background: isBusiness && !isDone ? '#3b82f6' : '' }} onClick={() => togglePart(territory.territorio_id, block.id, i, partStates[id])}>
+                                  Cara {i + 1} {isDone ? '✓' : ''}
+                                </button>
+                                <button className="type-toggle-btn" style={{ background: isBusiness ? '#4b5563' : '#e5e7eb', color: isBusiness ? 'white' : 'black' }} onClick={() => toggleFaceType(territory.territorio_id, block.id, i, isBusiness ? 'business' : 'normal')} title="Marcar como negocio">
+                                  👔
+                                </button>
+                              </div>
                             );
                           })}
                         </div>
                         <button 
                           className="complete-all-btn"
                           onClick={() => {
-                            const targetState = completedCount === numSides ? 'pending' : 'completed';
+                            const targetState = normalCompletedCount === normalCount ? 'pending' : 'completed';
                             block.puntos.forEach((_, i) => {
-                              const id = `${territory.territorio_id}_${block.id}_p${i}`;
-                              setPartStates(prev => ({ ...prev, [id]: targetState }));
-                              socket.emit('update_part', { 
-                                id, 
-                                territory_id: territory.territorio_id, 
-                                block_id: block.id, 
-                                part_index: i, 
-                                status: targetState,
-                                userName
-                              });
+                              const isBusiness = partStates[`type_${territory.territorio_id}_${block.id}_p${i}`] === 'business';
+                              if (!isBusiness) {
+                                const id = `${territory.territorio_id}_${block.id}_p${i}`;
+                                setPartStates(prev => ({ ...prev, [id]: targetState }));
+                                socket.emit('update_part', { id, territory_id: territory.territorio_id, block_id: block.id, part_index: i, status: targetState, userName });
+                              }
                             });
                           }}
                         >
-                          {completedCount === numSides ? 'Desmarcar Todo' : 'Marcar Todo'}
+                          {normalCompletedCount === normalCount ? 'Desmarcar Normales' : 'Marcar Normales'}
                         </button>
+                        
+                        {businessCount > 0 && (
+                          <button 
+                            className="complete-all-btn"
+                            style={{ marginTop: '5px', background: businessCompletedCount === businessCount ? '#f87171' : '#3b82f6' }}
+                            onClick={() => {
+                              const targetState = businessCompletedCount === businessCount ? 'pending' : 'completed';
+                              block.puntos.forEach((_, i) => {
+                                const isBusiness = partStates[`type_${territory.territorio_id}_${block.id}_p${i}`] === 'business';
+                                if (isBusiness) {
+                                  const id = `${territory.territorio_id}_${block.id}_p${i}`;
+                                  setPartStates(prev => ({ ...prev, [id]: targetState }));
+                                  socket.emit('update_part', { id, territory_id: territory.territorio_id, block_id: block.id, part_index: i, status: targetState, userName });
+                                }
+                              });
+                            }}
+                          >
+                            {businessCompletedCount === businessCount ? 'Desmarcar Negocios' : 'Completar Negocios'}
+                          </button>
+                        )}
                       </div>
                     </Popup>
                   </Polygon>
 
-                  {/* Líneas de borde individuales */}
-                  {block.puntos.map((point, i) => {
+                  {/* Líneas de borde */}
+                  {(!businessLayerActive || showBordersInBusinessLayer) && block.puntos.map((point, i) => {
                     const nextI = (i + 1) % numSides;
                     const linePositions = [point, block.puntos[nextI]];
-                    const isLineDone = partStates[`${territory.territorio_id}_${block.id}_p${i}`] === 'completed';
+                    const isDone = partStates[`${territory.territorio_id}_${block.id}_p${i}`] === 'completed';
+                    const isBusiness = partStates[`type_${territory.territorio_id}_${block.id}_p${i}`] === 'business';
+                    
+                    let lineColor = isDone ? '#16a34a' : '#ef4444';
+                    if (isBusiness) lineColor = isDone ? '#16a34a' : '#3b82f6';
                     
                     return (
                       <Polyline
                         key={`line_${i}`}
                         positions={linePositions}
-                        pathOptions={{
-                          color: isLineDone ? '#16a34a' : '#ef4444',
-                          weight: isLineDone ? 6 : 3,
-                          opacity: 0.9
-                        }}
+                        pathOptions={{ color: lineColor, weight: isDone ? 6 : 3, opacity: 0.9 }}
                       />
                     );
                   })}
                 </React.Fragment>
               );
             })}
-
           </React.Fragment>
           );
         })}
       </MapContainer>
 
-      {/* Botón menú hamburguesa (debajo de ubicación) */}
-      <div style={{ position: 'absolute', top: 70, right: 15, zIndex: 10000 }}>
+      {/* Botón de Capa de Negocios */}
+      <div style={{ position: 'absolute', top: 120, right: 15, zIndex: 10000 }}>
         <button 
-          className="hamburger-btn"
-          onClick={() => setShowLogPanel(true)}
-          title="Registro de actividad"
+          className="icon-btn"
+          style={{ background: businessLayerActive ? '#4b5563' : 'white', color: businessLayerActive ? 'white' : 'black' }}
+          onClick={() => setBusinessLayerActive(!businessLayerActive)}
+          title="Capa de Negocios"
         >
-          ☰
+          👔
         </button>
       </div>
 
-      {/* Nombre del usuario actual + edición */}
+      <div style={{ position: 'absolute', top: 70, right: 15, zIndex: 10000 }}>
+        <button className="icon-btn" onClick={() => setShowLogPanel(true)} title="Menú principal">☰</button>
+      </div>
+
       <div className="user-name-bar">
         {!editingName ? (
           <>
@@ -579,30 +575,16 @@ function MapComponent() {
           </>
         ) : (
           <>
-            <input 
-              type="text"
-              className="name-edit-input"
-              value={nameEdit}
-              onChange={(e) => setNameEdit(e.target.value)}
-              autoFocus
-            />
-            <button className="name-save-btn" onClick={() => {
-              if (nameEdit.trim()) {
-                setUserName(nameEdit.trim());
-                localStorage.setItem('userName', nameEdit.trim());
-              }
-              setEditingName(false);
-            }}>✓</button>
+            <input type="text" className="name-edit-input" value={nameEdit} onChange={(e) => setNameEdit(e.target.value)} autoFocus />
+            <button className="name-save-btn" onClick={() => { if (nameEdit.trim()) { setUserName(nameEdit.trim()); localStorage.setItem('userName', nameEdit.trim()); } setEditingName(false); }}>✓</button>
             <button className="name-cancel-btn" onClick={() => setEditingName(false)}>✕</button>
           </>
         )}
       </div>
 
-      {/* Botón de limpiar todo */}
       <ClearAllButton onConfirm={() => socket.emit('clear_all', { userName })} />
 
-      {/* Panel de registro de actividad */}
-      {showLogPanel && <LogPanel log={activityLog} onClose={() => setShowLogPanel(false)} />}
+      {showLogPanel && <LogPanel log={activityLog} onClose={() => setShowLogPanel(false)} onDownloadDocx={() => { setShowLogPanel(false); setShowDocxModal(true); }} />}
     </div>
   );
 }
