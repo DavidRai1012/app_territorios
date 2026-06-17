@@ -159,5 +159,26 @@
     "date": "2026-06-17T06:18:33.416Z",
     "territoryNum": "22",
     "blockNum": null
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:55:52.067Z",
+    "territoryNum": "17",
+    "blockNum": "1"
+  },
+  {
+    "type": "terminar_parcial",
+    "userName": "David",
+    "date": "2026-06-17T06:55:53.483Z",
+    "territoryNum": "17",
+    "blockNum": "1"
+  },
+  {
+    "type": "terminar_parcial",
+    "userName": "David",
+    "date": "2026-06-17T06:55:56.967Z",
+    "territoryNum": "17",
+    "blockNum": "1"
   }
 ]

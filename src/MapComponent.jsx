@@ -28,10 +28,10 @@ function ZoomTracker({ onZoomChange }) {
   return null;
 }
 
-function TerritoryWatermark({ territory, currentZoom }) {
+function TerritoryWatermark({ territory, currentZoom, businessLayerActive }) {
   if (!territory || !territory.limites) return null;
 
-  const opacity = currentZoom <= 16 ? 1 : 0.15;
+  const opacity = businessLayerActive ? 0.15 : (currentZoom <= 16 ? 1 : 0.15);
   const fontSize = currentZoom <= 16 ? "40" : "20"; 
 
   const bounds = L.latLngBounds(territory.limites);
@@ -396,14 +396,14 @@ function MapComponent() {
 
           return (
           <React.Fragment key={territory.territorio_id}>
-            <TerritoryWatermark territory={territory} currentZoom={currentZoom} />
+            <TerritoryWatermark territory={territory} currentZoom={currentZoom} businessLayerActive={businessLayerActive} />
 
             {/* Borde del territorio, se oculta un poco si la capa de negocios está activa */}
             {territory.limites && territory.limites.length >= 3 && !businessLayerActive && (
                <Polygon positions={territory.limites} pathOptions={{ color: territoryColor, weight: currentZoom <= 16 ? 5 : 3, fill: currentZoom <= 16, fillColor: territoryColor, fillOpacity: 0.2, dashArray: '5, 5', opacity: 0.9 }} interactive={false} />
             )}
 
-            {currentZoom > 16 && territory.manzanas.map(block => {
+            {(currentZoom > 16 || businessLayerActive) && territory.manzanas.map(block => {
               const numSides = block.puntos.length;
               let normalCount = 0;
               let normalCompletedCount = 0;
