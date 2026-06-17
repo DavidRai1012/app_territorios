@@ -19,5 +19,145 @@
     "date": "2026-06-07T03:55:25.192Z",
     "territoryNum": "13",
     "blockNum": null
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:14:29.354Z",
+    "territoryNum": "23",
+    "blockNum": "1"
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:14:31.086Z",
+    "territoryNum": "23",
+    "blockNum": "1"
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:14:32.236Z",
+    "territoryNum": "23",
+    "blockNum": "1"
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:14:33.486Z",
+    "territoryNum": "23",
+    "blockNum": "1"
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:14:45.323Z",
+    "territoryNum": "23",
+    "blockNum": "2"
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:14:46.406Z",
+    "territoryNum": "23",
+    "blockNum": "2"
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:14:47.606Z",
+    "territoryNum": "23",
+    "blockNum": "2"
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:14:48.623Z",
+    "territoryNum": "23",
+    "blockNum": "2"
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:14:49.690Z",
+    "territoryNum": "23",
+    "blockNum": "2"
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:14:50.823Z",
+    "territoryNum": "23",
+    "blockNum": "2"
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:14:58.289Z",
+    "territoryNum": "23",
+    "blockNum": "3"
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:14:59.623Z",
+    "territoryNum": "23",
+    "blockNum": "3"
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:15:01.824Z",
+    "territoryNum": "23",
+    "blockNum": "3"
+  },
+  {
+    "type": "completar_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:18:23.200Z",
+    "territoryNum": "22",
+    "blockNum": "1"
+  },
+  {
+    "type": "completar_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:18:26.633Z",
+    "territoryNum": "21",
+    "blockNum": "2"
+  },
+  {
+    "type": "completar_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:18:28.233Z",
+    "territoryNum": "21",
+    "blockNum": "1"
+  },
+  {
+    "type": "territorio_completo",
+    "userName": "David",
+    "date": "2026-06-17T06:18:28.233Z",
+    "territoryNum": "21",
+    "blockNum": null
+  },
+  {
+    "type": "completar_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:18:31.317Z",
+    "territoryNum": "22",
+    "blockNum": "2"
+  },
+  {
+    "type": "completar_manzana",
+    "userName": "David",
+    "date": "2026-06-17T06:18:33.416Z",
+    "territoryNum": "22",
+    "blockNum": "3"
+  },
+  {
+    "type": "territorio_completo",
+    "userName": "David",
+    "date": "2026-06-17T06:18:33.416Z",
+    "territoryNum": "22",
+    "blockNum": null
   }
 ]

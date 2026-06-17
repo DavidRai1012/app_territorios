@@ -276,7 +276,7 @@ const generateDocx = async (monthYear) => {
   saveAs(blob, `Registro_Territorios_${monthYear}.docx`);
 };
 
-function LogPanel({ log, onClose, onDownloadDocx }) {
+function LogPanel({ log, onClose, onDownloadDocx, userName }) {
   const reversed = [...log].reverse();
   return (
     <div className="log-panel-overlay" onClick={onClose}>
@@ -285,9 +285,11 @@ function LogPanel({ log, onClose, onDownloadDocx }) {
           <h3>📋 Registro de Actividad</h3>
           <button className="log-close-btn" onClick={onClose}>✕</button>
         </div>
-        <div style={{ padding: '10px' }}>
-          <button onClick={onDownloadDocx} className="docx-btn">📄 Descargar Registro DOCX</button>
-        </div>
+        {userName === 'Superintendente Nel' && (
+          <div style={{ padding: '10px' }}>
+            <button onClick={onDownloadDocx} className="docx-btn">📄 Descargar Registro DOCX</button>
+          </div>
+        )}
         <div className="log-panel-body">
           {reversed.length === 0 && <p className="log-empty">No hay actividad registrada aún.</p>}
           {reversed.map((entry, i) => {
@@ -431,9 +433,7 @@ function MapComponent() {
               // Si estamos en la capa de negocios y no hay negocios, ocultamos la manzana
               if (businessLayerActive && businessCount === 0) return null;
 
-              // Relleno normal (basado SOLO en caras normales)
-              const isFullyCompletedNormal = normalCount > 0 && normalCompletedCount === normalCount;
-              const isPartiallyCompletedNormal = normalCompletedCount > 0 && normalCompletedCount < normalCount;
+              // En la vista normal
               let fillColor = isFullyCompletedNormal ? '#22c55e' : isPartiallyCompletedNormal ? '#fbbf24' : '#3b82f6';
               let fillOpacity = isFullyCompletedNormal ? 0.6 : isPartiallyCompletedNormal ? 0.4 : 0.0;
               if (normalCount === 0) {
@@ -441,17 +441,16 @@ function MapComponent() {
                 fillOpacity = 0.0;
               }
 
-              // Relleno para capa de negocios
+              // Relleno para capa de negocios: SIN RELLENO
               if (businessLayerActive) {
-                fillColor = bagColor;
-                fillOpacity = 0.8;
+                fillOpacity = 0.0;
               }
 
               const blockCenter = L.latLngBounds(block.puntos).getCenter();
-              const bagHtml = businessCount > 0 ? `<div style="background:${bagColor}; color:white; border-radius:3px; padding:2px; font-size:12px; margin-top:2px;">👔</div>` : '';
+              const bagHtml = businessCount > 0 ? `<div class="block-bag" style="background:${bagColor};">💼</div>` : '';
               const blockIcon = L.divIcon({
-                className: 'block-number-label',
-                html: `<div style="display:flex; flex-direction:column; align-items:center;"><span>${block.numero}</span>${!businessLayerActive ? bagHtml : ''}</div>`,
+                className: 'block-number-container',
+                html: `<div class="block-number-label"><span>${block.numero}</span></div>${!businessLayerActive ? bagHtml : ''}`,
                 iconSize: [24, 40],
                 iconAnchor: [12, 12]
               });
@@ -463,6 +462,7 @@ function MapComponent() {
                 <React.Fragment key={block.id}>
                   <Marker position={blockCenter} icon={blockIcon} interactive={false} />
 
+                  {/* Polígono de relleno (sin relleno en capa de negocios) */}
                   <Polygon positions={block.puntos} pathOptions={{ stroke: false, fillColor, fillOpacity }} interactive={!businessLayerActive}>
                     <Popup>
                       <div className="popup-content">
@@ -478,9 +478,11 @@ function MapComponent() {
                                 <button className={`side-btn ${isDone ? 'done' : ''}`} style={{ flex: 1, background: isBusiness && !isDone ? '#3b82f6' : '' }} onClick={() => togglePart(territory.territorio_id, block.id, i, partStates[id])}>
                                   Cara {i + 1} {isDone ? '✓' : ''}
                                 </button>
-                                <button className="type-toggle-btn" style={{ background: isBusiness ? '#4b5563' : '#e5e7eb', color: isBusiness ? 'white' : 'black' }} onClick={() => toggleFaceType(territory.territorio_id, block.id, i, isBusiness ? 'business' : 'normal')} title="Marcar como negocio">
-                                  👔
-                                </button>
+                                {userName === 'Superintendente Nel' && (
+                                  <button className="type-toggle-btn" style={{ background: isBusiness ? '#4b5563' : '#e5e7eb', color: isBusiness ? 'white' : 'black' }} onClick={() => toggleFaceType(territory.territorio_id, block.id, i, isBusiness ? 'business' : 'normal')} title="Marcar como negocio">
+                                    💼
+                                  </button>
+                                )}
                               </div>
                             );
                           })}
@@ -526,12 +528,17 @@ function MapComponent() {
                   </Polygon>
 
                   {/* Líneas de borde */}
-                  {(!businessLayerActive || showBordersInBusinessLayer) && block.puntos.map((point, i) => {
+                  {block.puntos.map((point, i) => {
                     const nextI = (i + 1) % numSides;
                     const linePositions = [point, block.puntos[nextI]];
                     const isDone = partStates[`${territory.territorio_id}_${block.id}_p${i}`] === 'completed';
                     const isBusiness = partStates[`type_${territory.territorio_id}_${block.id}_p${i}`] === 'business';
                     
+                    // En capa de negocios, SOLO mostramos las caras que son negocios
+                    if (businessLayerActive && !isBusiness) {
+                      return null;
+                    }
+
                     let lineColor = isDone ? '#16a34a' : '#ef4444';
                     if (isBusiness) lineColor = isDone ? '#16a34a' : '#3b82f6';
                     
@@ -559,7 +566,7 @@ function MapComponent() {
           onClick={() => setBusinessLayerActive(!businessLayerActive)}
           title="Capa de Negocios"
         >
-          👔
+          💼
         </button>
       </div>
 
@@ -584,7 +591,7 @@ function MapComponent() {
 
       <ClearAllButton onConfirm={() => socket.emit('clear_all', { userName })} />
 
-      {showLogPanel && <LogPanel log={activityLog} onClose={() => setShowLogPanel(false)} onDownloadDocx={() => { setShowLogPanel(false); setShowDocxModal(true); }} />}
+      {showLogPanel && <LogPanel log={activityLog} onClose={() => setShowLogPanel(false)} onDownloadDocx={() => { setShowLogPanel(false); setShowDocxModal(true); }} userName={userName} />}
     </div>
   );
 }

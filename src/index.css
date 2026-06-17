@@ -170,16 +170,37 @@ body, html, #root {
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
+.block-number-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .block-number-label {
   background: white;
   border: 1px solid #94a3b8;
   border-radius: 50%;
+  width: 24px;
+  height: 24px;
   text-align: center;
   font-weight: bold;
   font-size: 12px;
   line-height: 22px;
   color: #1e293b;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.block-bag {
+  color: white;
+  border-radius: 3px;
+  padding: 2px 3px;
+  font-size: 11px;
+  margin-top: 3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  line-height: 1;
 }
 
 .territory-map-watermark span {
