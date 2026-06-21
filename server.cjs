@@ -227,7 +227,7 @@ io.on('connection', (socket) => {
       blockNum: null
     });
     saveActivityLog(log);
-    io.emit('initial_state', { states: {}, territories, activityLog: log });
+    io.emit('initial_state', { states: newStates, territories, activityLog: log });
   });
 
   socket.on('disconnect', () => {
