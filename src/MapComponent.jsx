@@ -474,8 +474,8 @@ function MapComponent() {
           <React.Fragment key={territory.territorio_id}>
             <TerritoryWatermark territory={territory} currentZoom={currentZoom} businessLayerActive={businessLayerActive} />
 
-            {/* Marcador del maletín del territorio (Solo en zoom out y si hay negocios) */}
-            {territoryCenter && territoryBagColor && currentZoom <= 16 && (
+            {/* Marcador del maletín del territorio (Solo en zoom out y si hay negocios, y NO en la capa de negocios) */}
+            {territoryCenter && territoryBagColor && currentZoom <= 16 && !businessLayerActive && (
               <Marker 
                 position={territoryCenter} 
                 icon={L.divIcon({
