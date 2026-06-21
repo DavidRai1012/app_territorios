@@ -198,6 +198,13 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('update_bag_position', ({ territory_id, position }) => {
+    const currentStates = loadPartStates();
+    currentStates[`bag_pos_${territory_id}`] = position;
+    savePartStates(currentStates);
+    io.emit('bag_position_updated', { territory_id, position });
+  });
+
   socket.on('clear_all', ({ userName } = {}) => {
     savePartStates({});
     const territories = loadTerritories();
