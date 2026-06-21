@@ -477,6 +477,7 @@ function MapComponent() {
             {/* Marcador del maletín del territorio (Solo en zoom out y si hay negocios, y NO en la capa de negocios) */}
             {territoryCenter && territoryBagColor && currentZoom <= 16 && !businessLayerActive && (
               <Marker 
+                key={`bag-${territory.territorio_id}-${bagPos}`}
                 position={territoryCenter} 
                 icon={L.divIcon({
                   className: 'territory-bag-container',
@@ -552,7 +553,9 @@ function MapComponent() {
 
               return (
                 <React.Fragment key={block.id}>
-                  <Marker position={blockCenter} icon={blockIcon} interactive={false} />
+                  {!businessLayerActive && (
+                    <Marker position={blockCenter} icon={blockIcon} interactive={false} />
+                  )}
 
                   {/* Polígono de relleno (sin relleno en capa de negocios) */}
                   <Polygon positions={block.puntos} pathOptions={{ stroke: false, fillColor, fillOpacity }} interactive={!businessLayerActive}>
