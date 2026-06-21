@@ -30,7 +30,7 @@ function ZoomTracker({ onZoomChange }) {
   return null;
 }
 
-function TerritoryWatermark({ territory, currentZoom, businessLayerActive }) {
+function TerritoryWatermark({ territory, currentZoom, businessLayerActive, territoryBagColor }) {
   if (!territory || !territory.limites) return null;
 
   const opacity = businessLayerActive ? 0.15 : (currentZoom <= 16 ? 1 : 0.15);
@@ -43,7 +43,7 @@ function TerritoryWatermark({ territory, currentZoom, businessLayerActive }) {
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <text 
           x="50%" 
-          y="50%" 
+          y={territoryBagColor && currentZoom <= 16 ? "40%" : "50%"} 
           dominantBaseline="middle" 
           textAnchor="middle" 
           fontSize={fontSize}
@@ -53,6 +53,19 @@ function TerritoryWatermark({ territory, currentZoom, businessLayerActive }) {
         >
           {territory.numero_territorio}
         </text>
+        {territoryBagColor && currentZoom <= 16 && (
+          <text 
+            x="50%" 
+            y="75%" 
+            dominantBaseline="middle" 
+            textAnchor="middle" 
+            fontSize="25"
+            fill={territoryBagColor}
+            style={{ userSelect: 'none', transition: 'all 0.3s', textShadow: '1px 1px 2px rgba(255,255,255,0.8)' }}
+          >
+            💼
+          </text>
+        )}
       </svg>
     </SVGOverlay>
   );
@@ -422,15 +435,21 @@ function MapComponent() {
         {territories.map(territory => {
           let totalNormalParts = 0;
           let completedNormalParts = 0;
+          let totalBusinessParts = 0;
+          let completedBusinessParts = 0;
           
           if (territory.manzanas) {
             territory.manzanas.forEach(block => {
               const numSides = block.puntos.length;
               for (let i = 0; i < numSides; i++) {
                 const isBusiness = partStates[`type_${territory.territorio_id}_${block.id}_p${i}`] === 'business';
-                if (!isBusiness) {
+                const isCompleted = partStates[`${territory.territorio_id}_${block.id}_p${i}`] === 'completed';
+                if (isBusiness) {
+                  totalBusinessParts++;
+                  if (isCompleted) completedBusinessParts++;
+                } else {
                   totalNormalParts++;
-                  if (partStates[`${territory.territorio_id}_${block.id}_p${i}`] === 'completed') completedNormalParts++;
+                  if (isCompleted) completedNormalParts++;
                 }
               }
             });
@@ -440,9 +459,16 @@ function MapComponent() {
           if (completedNormalParts > 0 && completedNormalParts < totalNormalParts) territoryColor = '#eab308';
           else if (completedNormalParts === totalNormalParts && totalNormalParts > 0) territoryColor = '#22c55e';
 
+          let territoryBagColor = null;
+          if (totalBusinessParts > 0) {
+            if (completedBusinessParts === totalBusinessParts) territoryBagColor = '#3b82f6';
+            else if (completedBusinessParts > 0) territoryBagColor = '#f97316';
+            else territoryBagColor = '#9ca3af';
+          }
+
           return (
           <React.Fragment key={territory.territorio_id}>
-            <TerritoryWatermark territory={territory} currentZoom={currentZoom} businessLayerActive={businessLayerActive} />
+            <TerritoryWatermark territory={territory} currentZoom={currentZoom} businessLayerActive={businessLayerActive} territoryBagColor={territoryBagColor} />
 
             {/* Borde del territorio, se oculta un poco si la capa de negocios está activa */}
             {territory.limites && territory.limites.length >= 3 && !businessLayerActive && (
