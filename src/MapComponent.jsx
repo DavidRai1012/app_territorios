@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Polygon, Polyline, Popup, Marker, useMap, SVGOverlay, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import io from 'socket.io-client';
@@ -20,13 +20,20 @@ function MapBoundsFitter({ territories }) {
   return null;
 }
 
-function ZoomTracker({ onZoomChange }) {
+function ZoomTracker({ onZoomChange, onBoundsChange }) {
   const map = useMapEvents({
-    zoomend: () => onZoomChange(map.getZoom())
+    zoomend: () => {
+      onZoomChange(map.getZoom());
+      if (onBoundsChange) onBoundsChange(map.getBounds());
+    },
+    moveend: () => {
+      if (onBoundsChange) onBoundsChange(map.getBounds());
+    }
   });
   useEffect(() => {
     onZoomChange(map.getZoom());
-  }, [map, onZoomChange]);
+    if (onBoundsChange) onBoundsChange(map.getBounds());
+  }, [map, onZoomChange, onBoundsChange]);
   return null;
 }
 
@@ -362,6 +369,7 @@ function MapComponent() {
   const [partStates, setPartStates] = useState({});
   const [territories, setTerritories] = useState([]);
   const [currentZoom, setCurrentZoom] = useState(16);
+  const [mapBounds, setMapBounds] = useState(null);
   const [userName, setUserName] = useState('');
   const [showPassword, setShowPassword] = useState(true);
   const [showNameModal, setShowNameModal] = useState(false);
@@ -398,19 +406,19 @@ function MapComponent() {
     };
   }, []);
 
-  const togglePart = (territoryId, blockId, partIndex, currentStatus) => {
+  const togglePart = useCallback((territoryId, blockId, partIndex, currentStatus) => {
     const id = `${territoryId}_${blockId}_p${partIndex}`;
     const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
     setPartStates(prev => ({ ...prev, [id]: newStatus }));
     socket.emit('update_part', { id, territory_id: territoryId, block_id: blockId, part_index: partIndex, status: newStatus, userName });
-  };
+  }, [userName]);
 
-  const toggleFaceType = (territoryId, blockId, partIndex, currentType) => {
+  const toggleFaceType = useCallback((territoryId, blockId, partIndex, currentType) => {
     const id = `${territoryId}_${blockId}_p${partIndex}`;
     const newType = currentType === 'business' ? 'normal' : 'business';
     setPartStates(prev => ({ ...prev, [`type_${id}`]: newType }));
     socket.emit('update_face_type', { id, type: newType, territory_id: territoryId, block_id: blockId, userName });
-  };
+  }, [userName]);
 
   if (showPassword) return <PasswordModal onSuccess={() => { setShowPassword(false); setShowNameModal(true); }} />;
   if (showNameModal) return <NameModal onSubmit={(name) => { setUserName(name); setNameEdit(name); setShowNameModal(false); }} />;
@@ -418,9 +426,9 @@ function MapComponent() {
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <MapContainer center={[4.7425, -74.090]} zoom={16} minZoom={14} maxZoom={22} style={{ width: '100%', height: '100%', zIndex: 1 }} zoomControl={false}>
+      <MapContainer center={[4.7425, -74.090]} zoom={16} minZoom={14} maxZoom={22} style={{ width: '100%', height: '100%', zIndex: 1 }} zoomControl={false} preferCanvas={true}>
         <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxNativeZoom={19} />
-        <ZoomTracker onZoomChange={setCurrentZoom} />
+        <ZoomTracker onZoomChange={setCurrentZoom} onBoundsChange={setMapBounds} />
         <MapBoundsFitter territories={territories} />
         <UserLocation />
 
@@ -470,6 +478,9 @@ function MapComponent() {
           else if (bagPos === 'Derecha') iconAnchor = [-10, 15];
           else if (bagPos === 'Centro') iconAnchor = [18, 15];
 
+          // Viewport culling: verificar si el territorio está visible en pantalla
+          const isTerritoryVisible = !mapBounds || !territory.limites || L.latLngBounds(territory.limites).intersects(mapBounds);
+
           return (
           <React.Fragment key={territory.territorio_id}>
             <TerritoryWatermark territory={territory} currentZoom={currentZoom} businessLayerActive={businessLayerActive} />
@@ -494,7 +505,12 @@ function MapComponent() {
                <Polygon positions={territory.limites} pathOptions={{ color: territoryColor, weight: currentZoom <= 16 ? 5 : 3, fill: currentZoom <= 16, fillColor: territoryColor, fillOpacity: 0.2, dashArray: '5, 5', opacity: 0.9 }} interactive={false} />
             )}
 
-            {(currentZoom > 16 || businessLayerActive) && territory.manzanas.map(block => {
+            {(currentZoom > 16 || businessLayerActive) && isTerritoryVisible && territory.manzanas.map(block => {
+              // Viewport culling: skip blocks not visible on screen
+              if (mapBounds) {
+                const blockBounds = L.latLngBounds(block.puntos);
+                if (!mapBounds.intersects(blockBounds)) return null;
+              }
               const numSides = block.puntos.length;
               let normalCount = 0;
               let normalCompletedCount = 0;
