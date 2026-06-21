@@ -30,7 +30,7 @@ function ZoomTracker({ onZoomChange }) {
   return null;
 }
 
-function TerritoryWatermark({ territory, currentZoom, businessLayerActive, territoryBagColor }) {
+function TerritoryWatermark({ territory, currentZoom, businessLayerActive }) {
   if (!territory || !territory.limites) return null;
 
   const opacity = businessLayerActive ? 0.15 : (currentZoom <= 16 ? 1 : 0.15);
@@ -43,7 +43,7 @@ function TerritoryWatermark({ territory, currentZoom, businessLayerActive, terri
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <text 
           x="50%" 
-          y={territoryBagColor && currentZoom <= 16 ? "40%" : "50%"} 
+          y="50%" 
           dominantBaseline="middle" 
           textAnchor="middle" 
           fontSize={fontSize}
@@ -53,19 +53,6 @@ function TerritoryWatermark({ territory, currentZoom, businessLayerActive, terri
         >
           {territory.numero_territorio}
         </text>
-        {territoryBagColor && currentZoom <= 16 && (
-          <text 
-            x="50%" 
-            y="75%" 
-            dominantBaseline="middle" 
-            textAnchor="middle" 
-            fontSize="25"
-            fill={territoryBagColor}
-            style={{ userSelect: 'none', transition: 'all 0.3s', textShadow: '1px 1px 2px rgba(255,255,255,0.8)' }}
-          >
-            💼
-          </text>
-        )}
       </svg>
     </SVGOverlay>
   );
@@ -466,9 +453,29 @@ function MapComponent() {
             else territoryBagColor = '#9ca3af';
           }
 
+          let territoryCenter = null;
+          if (territory.limites && territory.limites.length >= 3) {
+            territoryCenter = L.latLngBounds(territory.limites).getCenter();
+          }
+
           return (
           <React.Fragment key={territory.territorio_id}>
-            <TerritoryWatermark territory={territory} currentZoom={currentZoom} businessLayerActive={businessLayerActive} territoryBagColor={territoryBagColor} />
+            <TerritoryWatermark territory={territory} currentZoom={currentZoom} businessLayerActive={businessLayerActive} />
+
+            {/* Marcador del maletín del territorio (Solo en zoom out y si hay negocios) */}
+            {territoryCenter && territoryBagColor && currentZoom <= 16 && (
+              <Marker 
+                position={territoryCenter} 
+                icon={L.divIcon({
+                  className: 'territory-bag-container',
+                  html: `<div class="block-bag" style="background:${territoryBagColor}; padding: 6px 10px; font-size: 22px; border-radius: 8px;">💼</div>`,
+                  iconSize: [46, 40],
+                  // Centrado en x (23), desplazado hacia abajo en y (-15 mueve el icono hacia abajo respecto a su ancla)
+                  iconAnchor: [23, -20] 
+                })} 
+                interactive={false}
+              />
+            )}
 
             {/* Borde del territorio, se oculta un poco si la capa de negocios está activa */}
             {territory.limites && territory.limites.length >= 3 && !businessLayerActive && (
