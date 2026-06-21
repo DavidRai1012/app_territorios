@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Polygon, Polyline, Popup, Marker, useMap, SVGOverlay, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import io from 'socket.io-client';
-import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType, VerticalAlign } from 'docx';
+import PizZip from 'pizzip';
+import Docxtemplater from 'docxtemplater';
+import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
 const socket = io(import.meta.env.DEV ? 'http://localhost:3000' : '/');
@@ -192,88 +194,123 @@ function NameModal({ onSubmit }) {
 }
 
 function DocxModal({ onClose, onGenerate }) {
-  const [monthYear, setMonthYear] = useState('');
+  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const currentMonth = new Date().getMonth();
+  const [month, setMonth] = useState(meses[currentMonth]);
+  const [year, setYear] = useState(new Date().getFullYear().toString());
+  const years = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
+
   return (
     <div className="modal-overlay">
       <div className="modal-content">
         <h2>Descargar Registro DOCX</h2>
-        <p>Ingrese el Mes y Año (o "Año de servicio"):</p>
-        <input 
-          type="text" 
-          className="name-modal-input"
-          value={monthYear} 
-          onChange={(e) => setMonthYear(e.target.value)} 
-          placeholder="Ej: Septiembre 2026" 
-          autoFocus 
-        />
-        <button style={{ background: '#2563eb', color: 'white', marginTop: 10 }} onClick={() => { onGenerate(monthYear); onClose(); }}>Generar DOCX</button>
-        <button onClick={onClose}>Cancelar</button>
+        <p>Seleccione el Mes y Año:</p>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+          <select className="name-modal-input" value={month} onChange={(e) => setMonth(e.target.value)} style={{ flex: 1 }}>
+            {meses.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <select className="name-modal-input" value={year} onChange={(e) => setYear(e.target.value)} style={{ flex: 1 }}>
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+        <button style={{ background: '#2563eb', color: 'white', marginTop: 15 }} onClick={() => { onGenerate(month, year); onClose(); }}>Generar DOCX</button>
+        <button onClick={onClose} style={{ marginTop: 5 }}>Cancelar</button>
       </div>
     </div>
   );
 }
 
-const generateDocx = async (monthYear) => {
-  const cellMargins = { top: 100, bottom: 100, left: 100, right: 100 };
-  
-  const createRows = (start, end) => {
-    const rows = [];
-    rows.push(
-      new TableRow({
-        children: [
-          new TableCell({ children: [new Paragraph({ text: "Núm.\nde terr.", alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER, margins: cellMargins }),
-          new TableCell({ children: [new Paragraph({ text: "Última fecha\nen que se\ncompletó*", alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER, margins: cellMargins }),
-          ...Array(4).fill(null).map(() => new TableCell({ children: [new Paragraph({ text: "Asignado a", alignment: AlignmentType.CENTER })], columnSpan: 2, margins: cellMargins })),
-        ]
-      }),
-      new TableRow({
-        children: [
-          ...Array(8).fill(null).map((_, i) => new TableCell({ children: [new Paragraph({ text: i % 2 === 0 ? "Fecha en que\nse asignó" : "Fecha en que\nse completó", alignment: AlignmentType.CENTER })], margins: cellMargins }))
-        ]
-      })
-    );
-    for (let i = start; i <= end; i++) {
-      rows.push(
-        new TableRow({
-          children: [
-            new TableCell({ children: [new Paragraph({ text: i.toString(), alignment: AlignmentType.CENTER })], margins: cellMargins }),
-            new TableCell({ children: [new Paragraph("")] }),
-            ...Array(8).fill(null).map(() => new TableCell({ children: [new Paragraph("")] }))
-          ]
-        })
-      );
+const generateDocx = async (month, year, activityLog) => {
+  try {
+    const data = {};
+    for (let i = 1; i <= 40; i++) {
+      data[i] = { fman: '', completions: [] };
     }
-    return rows;
-  };
 
-  const table1 = new Table({ rows: createRows(1, 20), width: { size: 100, type: WidthType.PERCENTAGE } });
-  const table2 = new Table({ rows: createRows(21, 37), width: { size: 100, type: WidthType.PERCENTAGE } });
+    const currentNames = {};
 
-  const doc = new Document({
-    sections: [
-      {
-        properties: {},
-        children: [
-          new Paragraph({ children: [new TextRun({ text: "REGISTRO DE ASIGNACIÓN DE TERRITORIO", bold: true, size: 28 })], alignment: AlignmentType.CENTER, spacing: { after: 200 } }),
-          new Paragraph({ children: [new TextRun({ text: `Año de servicio: ${monthYear}`, bold: true, size: 24 })], spacing: { after: 200 } }),
-          table1,
-          new Paragraph({ text: "*Cuando comience una nueva página, anote en esta columna la última fecha en que los territorios se completaron.", spacing: { before: 100 } }),
-        ]
-      },
-      {
-        properties: {},
-        children: [
-          new Paragraph({ children: [new TextRun({ text: "REGISTRO DE ASIGNACIÓN DE TERRITORIO", bold: true, size: 28 })], alignment: AlignmentType.CENTER, spacing: { after: 200 } }),
-          new Paragraph({ children: [new TextRun({ text: `Año de servicio: ${monthYear}`, bold: true, size: 24 })], spacing: { after: 200 } }),
-          table2,
-          new Paragraph({ text: "*Cuando comience una nueva página, anote en esta columna la última fecha en que los territorios se completaron.", spacing: { before: 100 } }),
-        ]
+    activityLog.forEach(log => {
+      const tNum = parseInt(log.territoryNum);
+      if (!tNum || tNum > 40) return;
+
+      if (!currentNames[tNum]) currentNames[tNum] = new Set();
+
+      if (['completar_manzana', 'terminar_parcial', 'parcial_manzana'].includes(log.type)) {
+        if (log.userName && log.userName !== 'Desconocido') {
+          currentNames[tNum].add(log.userName);
+        }
+      } else if (log.type === 'territorio_completo') {
+        const dateObj = new Date(log.date);
+        const dateStr = `${dateObj.getDate()}/${dateObj.getMonth() + 1}/${dateObj.getFullYear()}`;
+        
+        const namesArray = Array.from(currentNames[tNum]);
+        const formattedNames = namesArray.map(name => {
+          const parts = name.trim().split(' ');
+          if (parts.length === 1) return parts[0];
+          return parts[0] + ' ' + parts[1][0] + '.';
+        }).join('-');
+
+        data[tNum].completions.push({ date: dateStr, names: formattedNames });
+        data[tNum].fman = dateStr;
+        currentNames[tNum].clear();
       }
-    ]
-  });
+    });
 
-  const blob = await Packer.toBlob(doc);
-  saveAs(blob, `Registro_Territorios_${monthYear}.docx`);
+    const response = await fetch('/plantilla.docx');
+    if (!response.ok) throw new Error('Plantilla no encontrada');
+    const arrayBuffer = await response.arrayBuffer();
+
+    const createDocData = (offset) => {
+      const docData = { mes: month, anio: year };
+      for (let i = 1; i <= 40; i++) {
+        if (i <= 37) {
+          docData[`tn${i}`] = i.toString();
+          docData[`fman${i}`] = data[i].fman;
+          for (let r = 0; r < 4; r++) {
+            const comp = data[i].completions[offset + r];
+            docData[`Ntn${i}R${r}`] = comp ? comp.names : '';
+            docData[`ftn${i}R${r}`] = comp ? comp.date : '';
+          }
+        } else {
+          docData[`tn${i}`] = '';
+          docData[`fman${i}`] = '';
+          for (let r = 0; r < 4; r++) {
+            docData[`Ntn${i}R${r}`] = '';
+            docData[`ftn${i}R${r}`] = '';
+          }
+        }
+      }
+      return docData;
+    };
+
+    let maxComps = 0;
+    for (let i = 1; i <= 37; i++) {
+      maxComps = Math.max(maxComps, data[i].completions.length);
+    }
+    const numFiles = Math.max(1, Math.ceil(maxComps / 4));
+
+    if (numFiles === 1) {
+      const zip = new PizZip(arrayBuffer);
+      const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+      doc.render(createDocData(0));
+      const out = doc.getZip().generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      saveAs(out, `Registro_${month}_${year}.docx`);
+    } else {
+      const outZip = new JSZip();
+      for (let f = 0; f < numFiles; f++) {
+        const zip = new PizZip(arrayBuffer);
+        const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+        doc.render(createDocData(f * 4));
+        const out = doc.getZip().generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        outZip.file(`Registro_${month}_${year}_Parte${f+1}.docx`, out);
+      }
+      const content = await outZip.generateAsync({ type: 'blob' });
+      saveAs(content, `Registro_${month}_${year}_Completo.zip`);
+    }
+  } catch (error) {
+    console.error('Error generando DOCX:', error);
+    alert('Hubo un error al generar el archivo. Verifica la consola.');
+  }
 };
 
 function LogPanel({ log, onClose, onDownloadDocx, userName }) {
@@ -363,7 +400,7 @@ function MapComponent() {
 
   if (showPassword) return <PasswordModal onSuccess={() => { setShowPassword(false); setShowNameModal(true); }} />;
   if (showNameModal) return <NameModal onSubmit={(name) => { setUserName(name); setNameEdit(name); setShowNameModal(false); }} />;
-  if (showDocxModal) return <DocxModal onClose={() => setShowDocxModal(false)} onGenerate={generateDocx} />;
+  if (showDocxModal) return <DocxModal onClose={() => setShowDocxModal(false)} onGenerate={(m, y) => generateDocx(m, y, activityLog)} />;
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>

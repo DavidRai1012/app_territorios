@@ -243,5 +243,54 @@
     "date": "2026-06-17T07:07:21.700Z",
     "territoryNum": "6",
     "blockNum": "1"
+  },
+  {
+    "type": "completar_manzana",
+    "userName": "Nel",
+    "date": "2026-06-17T07:09:20.882Z",
+    "territoryNum": "23",
+    "blockNum": "2"
+  },
+  {
+    "type": "completar_manzana",
+    "userName": "Nel",
+    "date": "2026-06-17T07:09:44.514Z",
+    "territoryNum": "33",
+    "blockNum": "1"
+  },
+  {
+    "type": "territorio_completo",
+    "userName": "Nel",
+    "date": "2026-06-17T07:09:44.514Z",
+    "territoryNum": "33",
+    "blockNum": null
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "Nel",
+    "date": "2026-06-17T07:11:20.326Z",
+    "territoryNum": "33",
+    "blockNum": "1"
+  },
+  {
+    "type": "terminar_parcial",
+    "userName": "Nel",
+    "date": "2026-06-17T07:11:27.425Z",
+    "territoryNum": "33",
+    "blockNum": "1"
+  },
+  {
+    "type": "territorio_completo",
+    "userName": "Nel",
+    "date": "2026-06-17T07:11:27.425Z",
+    "territoryNum": "33",
+    "blockNum": null
+  },
+  {
+    "type": "parcial_manzana",
+    "userName": "Superintendente Nel",
+    "date": "2026-06-18T01:37:09.200Z",
+    "territoryNum": "32",
+    "blockNum": "2"
   }
 ]
