@@ -468,10 +468,10 @@ function MapComponent() {
                 position={territoryCenter} 
                 icon={L.divIcon({
                   className: 'territory-bag-container',
-                  html: `<div class="block-bag" style="background:${territoryBagColor}; padding: 6px 10px; font-size: 22px; border-radius: 8px;">💼</div>`,
-                  iconSize: [46, 40],
-                  // Centrado en x (23), desplazado hacia abajo en y (-15 mueve el icono hacia abajo respecto a su ancla)
-                  iconAnchor: [23, -20] 
+                  html: `<div class="block-bag" style="background:${territoryBagColor}; padding: 4px 8px; font-size: 16px; border-radius: 6px;">💼</div>`,
+                  iconSize: [36, 30],
+                  // Centrado en x (18), desplazado hacia abajo en y (-15)
+                  iconAnchor: [18, -15] 
                 })} 
                 interactive={false}
               />
