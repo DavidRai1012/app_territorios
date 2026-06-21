@@ -386,6 +386,11 @@ function MapComponent() {
     socket.on('face_type_updated', ({ id, type }) => {
       setPartStates(prev => ({ ...prev, [`type_${id}`]: type }));
     });
+
+    socket.on('bag_position_updated', ({ territory_id, position }) => {
+      setPartStates(prev => ({ ...prev, [`bag_pos_${territory_id}`]: position }));
+    });
+
     socket.on('activity_log', (log) => setActivityLog(log));
 
     return () => {
@@ -458,6 +463,13 @@ function MapComponent() {
             territoryCenter = L.latLngBounds(territory.limites).getCenter();
           }
 
+          let iconAnchor = [18, -15]; // Abajo (predeterminado)
+          const bagPos = partStates[`bag_pos_${territory.territorio_id}`] || 'Abajo';
+          if (bagPos === 'Arriba') iconAnchor = [18, 45];
+          else if (bagPos === 'Izquierda') iconAnchor = [45, 15];
+          else if (bagPos === 'Derecha') iconAnchor = [-10, 15];
+          else if (bagPos === 'Centro') iconAnchor = [18, 15];
+
           return (
           <React.Fragment key={territory.territorio_id}>
             <TerritoryWatermark territory={territory} currentZoom={currentZoom} businessLayerActive={businessLayerActive} />
@@ -470,8 +482,7 @@ function MapComponent() {
                   className: 'territory-bag-container',
                   html: `<div class="block-bag" style="background:${territoryBagColor}; padding: 4px 8px; font-size: 16px; border-radius: 6px;">💼</div>`,
                   iconSize: [36, 30],
-                  // Centrado en x (18), desplazado hacia abajo en y (-15)
-                  iconAnchor: [18, -15] 
+                  iconAnchor: iconAnchor 
                 })} 
                 interactive={false}
               />
@@ -601,8 +612,31 @@ function MapComponent() {
                               });
                             }}
                           >
-                            {businessCompletedCount === businessCount ? 'Desmarcar Negocios' : 'Completar Negocios'}
+                            {businessCompletedCount === businessCount ? 'Desmarcar Negocios' : 'Marcar Negocios'}
                           </button>
+                        )}
+
+                        {userName === 'Superintendente Nel' && (
+                          <div style={{ marginTop: '10px', padding: '5px', background: '#f3f4f6', borderRadius: '5px' }}>
+                            <label style={{ fontSize: '11px', display: 'block', marginBottom: '2px', color: '#4b5563' }}>
+                              Posición del Maletín del Territorio:
+                            </label>
+                            <select 
+                              style={{ width: '100%', padding: '3px', fontSize: '12px', borderRadius: '3px', border: '1px solid #ccc' }}
+                              value={partStates[`bag_pos_${territory.territorio_id}`] || 'Abajo'}
+                              onChange={(e) => {
+                                const newPos = e.target.value;
+                                setPartStates(prev => ({ ...prev, [`bag_pos_${territory.territorio_id}`]: newPos }));
+                                socket.emit('update_bag_position', { territory_id: territory.territorio_id, position: newPos });
+                              }}
+                            >
+                              <option value="Abajo">Abajo</option>
+                              <option value="Arriba">Arriba</option>
+                              <option value="Izquierda">Izquierda</option>
+                              <option value="Derecha">Derecha</option>
+                              <option value="Centro">Centro</option>
+                            </select>
+                          </div>
                         )}
                       </div>
                     </Popup>
