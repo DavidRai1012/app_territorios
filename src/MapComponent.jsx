@@ -253,13 +253,16 @@ const generateDocx = async (year, activityLog) => {
           const dateStr = `${logDate.getDate()}/${logDate.getMonth() + 1}/${logDate.getFullYear()}`;
 
           const namesArray = Array.from(currentNames[tNum]);
-          const formattedNames = namesArray.map(name => {
+          const formattedNamesArray = namesArray.map(name => {
             const parts = name.trim().split(' ');
             if (parts.length === 1) return parts[0];
             return parts[0] + ' ' + parts[1][0] + '.';
-          }).join('-');
+          });
+          
+          // Deduplicar nombres DESPUÉS de formatearlos
+          const uniqueFormattedNames = Array.from(new Set(formattedNamesArray)).join('-');
 
-          data[tNum].completions.push({ date: dateStr, names: formattedNames });
+          data[tNum].completions.push({ date: dateStr, names: uniqueFormattedNames });
           data[tNum].fman = dateStr;
         }
         currentNames[tNum].clear();
@@ -347,14 +350,37 @@ function LogPanel({ log, onClose, onDownloadDocx, userName }) {
           {reversed.length === 0 && <p className="log-empty">No hay actividad registrada aún.</p>}
           {reversed.map((entry, i) => {
             const emoji = entry.type === 'completar_manzana' ? '🟢' : entry.type === 'parcial_manzana' ? '🟡' : entry.type === 'terminar_parcial' ? '✅' : entry.type === 'territorio_completo' ? '🏆' : entry.type === 'limpiar_todo' ? '🗑️' : '📝';
-            const text = entry.type === 'completar_manzana' ? `Completar manzana ${entry.blockNum}` : entry.type === 'parcial_manzana' ? `Realizar parcial manzana ${entry.blockNum}` : entry.type === 'terminar_parcial' ? `Terminar parcial manzana ${entry.blockNum}` : entry.type === 'territorio_completo' ? `¡Territorio ${entry.territoryNum} COMPLETADO!` : entry.type === 'limpiar_todo' ? 'Limpiar todo' : 'Cambio';
+            
+            let mainText = '';
+            let subText = '';
+
+            if (entry.type === 'completar_manzana') {
+              mainText = `Territorio ${entry.territoryNum}`;
+              subText = `Se completó la manzana ${entry.blockNum}`;
+            } else if (entry.type === 'parcial_manzana') {
+              mainText = `Territorio ${entry.territoryNum}`;
+              subText = `Se realizó parcial de la manzana ${entry.blockNum}`;
+            } else if (entry.type === 'terminar_parcial') {
+              mainText = `Territorio ${entry.territoryNum}`;
+              subText = `Se terminó parcial de la manzana ${entry.blockNum}`;
+            } else if (entry.type === 'territorio_completo') {
+              mainText = `¡Territorio ${entry.territoryNum} COMPLETADO!`;
+              subText = '';
+            } else if (entry.type === 'limpiar_todo') {
+              mainText = 'Limpiar todo';
+              subText = '';
+            } else {
+              mainText = 'Cambio';
+              subText = '';
+            }
+
             return (
               <div key={i} className={`log-entry log-type-${entry.type}`}>
                 <span className="log-emoji">{emoji}</span>
                 <div className="log-info">
-                  <strong>{text}</strong>
-                  {entry.territoryNum && entry.type !== 'territorio_completo' && <span className="log-territory"> (Territorio {entry.territoryNum})</span>}
-                  <div className="log-meta">{entry.userName} — {new Date(entry.date).toLocaleString()}</div>
+                  <strong>{mainText}</strong>
+                  {subText && <div style={{ fontSize: '0.9em', color: '#555', marginTop: '2px' }}>{subText}</div>}
+                  <div className="log-meta" style={{ marginTop: '4px' }}>{entry.userName} — {new Date(entry.date).toLocaleString()}</div>
                 </div>
               </div>
             );
