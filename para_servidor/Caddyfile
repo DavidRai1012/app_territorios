@@ -1,0 +1,3 @@
+control-de-territorios-suba.mooo.com {
+    reverse_proxy app:3000
+}
