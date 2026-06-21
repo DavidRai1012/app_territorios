@@ -206,9 +206,19 @@ io.on('connection', (socket) => {
   });
 
   socket.on('clear_all', ({ userName } = {}) => {
-    savePartStates({});
+    const currentStates = loadPartStates();
+    const newStates = {};
+    for (const key in currentStates) {
+      if (key.startsWith('type_') || key.startsWith('bag_pos_')) {
+        newStates[key] = currentStates[key];
+      }
+    }
+    savePartStates(newStates);
+    
+    // Forzar sincronización de todos los clientes con el nuevo estado parcial
     const territories = loadTerritories();
     const log = loadActivityLog();
+    io.emit('initial_state', { states: newStates, territories, activityLog: log });
     log.push({
       type: 'limpiar_todo',
       userName: userName || 'Desconocido',

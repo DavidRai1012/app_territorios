@@ -150,7 +150,7 @@ function ClearAllButton({ onConfirm }) {
   );
 }
 
-function PasswordModal({ onSuccess }) {
+function PasswordModal({ onSuccess, onReadOnly }) {
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState('');
@@ -175,7 +175,10 @@ function PasswordModal({ onSuccess }) {
           </button>
         </div>
         {error && <p style={{ color: '#ef4444', fontSize: '13px', margin: '5px 0' }}>{error}</p>}
-        <button onClick={handleSubmit} style={{ background: '#2563eb', color: 'white' }}>Entrar</button>
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+          <button onClick={handleSubmit} style={{ background: '#2563eb', color: 'white' }}>Entrar</button>
+          <button onClick={onReadOnly} style={{ background: '#6b7280', color: 'white' }}>Ver mapa</button>
+        </div>
       </div>
     </div>
   );
@@ -404,6 +407,7 @@ function MapComponent() {
   const [showLogPanel, setShowLogPanel] = useState(false);
   const [nameEdit, setNameEdit] = useState('');
   const [editingName, setEditingName] = useState(false);
+  const [isReadOnly, setIsReadOnly] = useState(false);
   
   // Capa de negocios
   const [businessLayerActive, setBusinessLayerActive] = useState(false);
@@ -446,9 +450,9 @@ function MapComponent() {
     socket.emit('update_face_type', { id, type: newType, territory_id: territoryId, block_id: blockId, userName });
   }, [userName]);
 
-  if (showPassword) return <PasswordModal onSuccess={() => { setShowPassword(false); setShowNameModal(true); }} />;
-  if (showNameModal) return <NameModal onSubmit={(name) => { setUserName(name); setNameEdit(name); setShowNameModal(false); }} />;
-  if (showDocxModal) return <DocxModal onClose={() => setShowDocxModal(false)} onGenerate={(y) => generateDocx(y, activityLog)} />;
+  if (showPassword) return <PasswordModal onSuccess={() => { setShowPassword(false); setShowNameModal(true); }} onReadOnly={() => { setIsReadOnly(true); setShowPassword(false); setUserName('Solo Lectura'); }} />;
+  if (showNameModal && !isReadOnly) return <NameModal onSubmit={(name) => { setUserName(name); setNameEdit(name); setShowNameModal(false); }} />;
+  if (showDocxModal && !isReadOnly) return <DocxModal onClose={() => setShowDocxModal(false)} onGenerate={(y) => generateDocx(y, activityLog)} />;
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -612,10 +616,10 @@ function MapComponent() {
                             const isBusiness = partStates[`type_${id}`] === 'business';
                             return (
                               <div key={i} style={{ display: 'flex', gap: '5px' }}>
-                                <button className={`side-btn ${isDone ? 'done' : ''}`} style={{ flex: 1, background: isBusiness && !isDone ? '#3b82f6' : '' }} onClick={() => togglePart(territory.territorio_id, block.id, i, partStates[id])}>
+                                <button className={`side-btn ${isDone ? 'done' : ''}`} style={{ flex: 1, background: isBusiness && !isDone ? '#3b82f6' : '' }} onClick={() => !isReadOnly && togglePart(territory.territorio_id, block.id, i, partStates[id])} disabled={isReadOnly}>
                                   Cara {i + 1} {isDone ? '✓' : ''}
                                 </button>
-                                {userName === 'Superintendente Nel' && (
+                                {!isReadOnly && userName === 'Superintendente Nel' && (
                                   <button className="type-toggle-btn" style={{ background: isBusiness ? '#4b5563' : '#e5e7eb', color: isBusiness ? 'white' : 'black' }} onClick={() => toggleFaceType(territory.territorio_id, block.id, i, isBusiness ? 'business' : 'normal')} title="Marcar como negocio">
                                     💼
                                   </button>
@@ -624,41 +628,45 @@ function MapComponent() {
                             );
                           })}
                         </div>
-                        <button 
-                          className="complete-all-btn"
-                          onClick={() => {
-                            const targetState = normalCompletedCount === normalCount ? 'pending' : 'completed';
-                            block.puntos.forEach((_, i) => {
-                              const isBusiness = partStates[`type_${territory.territorio_id}_${block.id}_p${i}`] === 'business';
-                              if (!isBusiness) {
-                                const id = `${territory.territorio_id}_${block.id}_p${i}`;
-                                setPartStates(prev => ({ ...prev, [id]: targetState }));
-                                socket.emit('update_part', { id, territory_id: territory.territorio_id, block_id: block.id, part_index: i, status: targetState, userName });
-                              }
-                            });
-                          }}
-                        >
-                          {normalCompletedCount === normalCount ? 'Desmarcar Normales' : 'Marcar Normales'}
-                        </button>
-                        
-                        {businessCount > 0 && (
-                          <button 
-                            className="complete-all-btn"
-                            style={{ marginTop: '5px', background: businessCompletedCount === businessCount ? '#f87171' : '#3b82f6' }}
-                            onClick={() => {
-                              const targetState = businessCompletedCount === businessCount ? 'pending' : 'completed';
-                              block.puntos.forEach((_, i) => {
-                                const isBusiness = partStates[`type_${territory.territorio_id}_${block.id}_p${i}`] === 'business';
-                                if (isBusiness) {
-                                  const id = `${territory.territorio_id}_${block.id}_p${i}`;
-                                  setPartStates(prev => ({ ...prev, [id]: targetState }));
-                                  socket.emit('update_part', { id, territory_id: territory.territorio_id, block_id: block.id, part_index: i, status: targetState, userName });
-                                }
-                              });
-                            }}
-                          >
-                            {businessCompletedCount === businessCount ? 'Desmarcar Negocios' : 'Marcar Negocios'}
-                          </button>
+                        {!isReadOnly && (
+                          <>
+                            <button 
+                              className="complete-all-btn"
+                              onClick={() => {
+                                const targetState = normalCompletedCount === normalCount ? 'pending' : 'completed';
+                                block.puntos.forEach((_, i) => {
+                                  const isBusiness = partStates[`type_${territory.territorio_id}_${block.id}_p${i}`] === 'business';
+                                  if (!isBusiness) {
+                                    const id = `${territory.territorio_id}_${block.id}_p${i}`;
+                                    setPartStates(prev => ({ ...prev, [id]: targetState }));
+                                    socket.emit('update_part', { id, territory_id: territory.territorio_id, block_id: block.id, part_index: i, status: targetState, userName });
+                                  }
+                                });
+                              }}
+                            >
+                              {normalCompletedCount === normalCount ? 'Desmarcar Normales' : 'Marcar Normales'}
+                            </button>
+                            
+                            {businessCount > 0 && (
+                              <button 
+                                className="complete-all-btn"
+                                style={{ marginTop: '5px', background: businessCompletedCount === businessCount ? '#f87171' : '#3b82f6' }}
+                                onClick={() => {
+                                  const targetState = businessCompletedCount === businessCount ? 'pending' : 'completed';
+                                  block.puntos.forEach((_, i) => {
+                                    const isBusiness = partStates[`type_${territory.territorio_id}_${block.id}_p${i}`] === 'business';
+                                    if (isBusiness) {
+                                      const id = `${territory.territorio_id}_${block.id}_p${i}`;
+                                      setPartStates(prev => ({ ...prev, [id]: targetState }));
+                                      socket.emit('update_part', { id, territory_id: territory.territorio_id, block_id: block.id, part_index: i, status: targetState, userName });
+                                    }
+                                  });
+                                }}
+                              >
+                                {businessCompletedCount === businessCount ? 'Desmarcar Negocios' : 'Marcar Negocios'}
+                              </button>
+                            )}
+                          </>
                         )}
 
                         {userName === 'Superintendente Nel' && (
@@ -730,28 +738,34 @@ function MapComponent() {
         </button>
       </div>
 
-      <div style={{ position: 'absolute', top: 70, right: 15, zIndex: 10000 }}>
-        <button className="icon-btn" onClick={() => setShowLogPanel(true)} title="Menú principal">☰</button>
-      </div>
+      {!isReadOnly && (
+        <div style={{ position: 'absolute', top: 70, right: 15, zIndex: 10000 }}>
+          <button className="icon-btn" onClick={() => setShowLogPanel(true)} title="Menú principal">☰</button>
+        </div>
+      )}
 
-      <div className="user-name-bar">
-        {!editingName ? (
-          <>
-            <span>Usuario: {userName}</span>
-            <button className="name-edit-btn" onClick={() => { setEditingName(true); setNameEdit(userName); }}>Editar</button>
-          </>
-        ) : (
-          <>
-            <input type="text" className="name-edit-input" value={nameEdit} onChange={(e) => setNameEdit(e.target.value)} autoFocus />
-            <button className="name-save-btn" onClick={() => { if (nameEdit.trim()) { setUserName(nameEdit.trim()); localStorage.setItem('userName', nameEdit.trim()); } setEditingName(false); }}>✓</button>
-            <button className="name-cancel-btn" onClick={() => setEditingName(false)}>✕</button>
-          </>
-        )}
-      </div>
+      {!isReadOnly && (
+        <div className="user-name-bar">
+          {!editingName ? (
+            <>
+              <span>Usuario: {userName}</span>
+              <button className="name-edit-btn" onClick={() => { setEditingName(true); setNameEdit(userName); }}>Editar</button>
+            </>
+          ) : (
+            <>
+              <input type="text" className="name-edit-input" value={nameEdit} onChange={(e) => setNameEdit(e.target.value)} autoFocus />
+              <button className="name-save-btn" onClick={() => { if (nameEdit.trim()) { setUserName(nameEdit.trim()); localStorage.setItem('userName', nameEdit.trim()); } setEditingName(false); }}>✓</button>
+              <button className="name-cancel-btn" onClick={() => setEditingName(false)}>✕</button>
+            </>
+          )}
+        </div>
+      )}
 
-      <ClearAllButton onConfirm={() => socket.emit('clear_all', { userName })} />
+      {!isReadOnly && userName === 'Superintendente Nel' && (
+        <ClearAllButton onConfirm={() => socket.emit('clear_all', { userName })} />
+      )}
 
-      {showLogPanel && <LogPanel log={activityLog} onClose={() => setShowLogPanel(false)} onDownloadDocx={() => { setShowLogPanel(false); setShowDocxModal(true); }} userName={userName} />}
+      {!isReadOnly && showLogPanel && <LogPanel log={activityLog} onClose={() => setShowLogPanel(false)} onDownloadDocx={() => { setShowLogPanel(false); setShowDocxModal(true); }} userName={userName} />}
     </div>
   );
 }
