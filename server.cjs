@@ -230,6 +230,13 @@ io.on('connection', (socket) => {
     io.emit('initial_state', { states: newStates, territories, activityLog: log });
   });
 
+  socket.on('delete_log_entry', ({ dateStr }) => {
+    const log = loadActivityLog();
+    const newLog = log.filter(entry => entry.date !== dateStr);
+    saveActivityLog(newLog);
+    io.emit('activity_log', newLog);
+  });
+
   socket.on('disconnect', () => {
     console.log('Usuario desconectado');
   });

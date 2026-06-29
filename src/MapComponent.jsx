@@ -378,13 +378,26 @@ function LogPanel({ log, onClose, onDownloadDocx, userName }) {
             }
 
             return (
-              <div key={i} className={`log-entry log-type-${entry.type}`}>
+              <div key={i} className={`log-entry log-type-${entry.type}`} style={{ display: 'flex' }}>
                 <span className="log-emoji">{emoji}</span>
-                <div className="log-info">
+                <div className="log-info" style={{ flexGrow: 1 }}>
                   <strong>{mainText}</strong>
                   {subText && <div style={{ fontSize: '0.9em', color: '#555', marginTop: '2px' }}>{subText}</div>}
                   <div className="log-meta" style={{ marginTop: '4px' }}>{entry.userName} — {new Date(entry.date).toLocaleString()}</div>
                 </div>
+                {userName === 'Superintendente Nel' && (
+                  <button 
+                    onClick={() => {
+                      if (window.confirm('¿Seguro que quieres borrar este registro?')) {
+                        socket.emit('delete_log_entry', { dateStr: entry.date });
+                      }
+                    }} 
+                    style={{ background: '#ef4444', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '4px', cursor: 'pointer', marginLeft: '10px', alignSelf: 'center', flexShrink: 0 }}
+                    title="Borrar registro"
+                  >
+                    🗑️
+                  </button>
+                )}
               </div>
             );
           })}
