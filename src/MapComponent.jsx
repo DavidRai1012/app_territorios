@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Polygon, Polyline, Popup, Marker, useMap, SVGOverlay, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet-rotate';
 import io from 'socket.io-client';
 import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
@@ -469,7 +470,7 @@ function MapComponent() {
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <MapContainer center={[4.7425, -74.090]} zoom={16} minZoom={14} maxZoom={22} style={{ width: '100%', height: '100%', zIndex: 1 }} zoomControl={false} preferCanvas={true}>
+      <MapContainer center={[4.7425, -74.090]} zoom={16} minZoom={14} maxZoom={22} style={{ width: '100%', height: '100%', zIndex: 1 }} zoomControl={false} preferCanvas={true} rotate={true} touchRotate={true} rotateControl={{ closeOnZero: true }}>
         <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxNativeZoom={19} />
         <ZoomTracker onZoomChange={setCurrentZoom} onBoundsChange={setMapBounds} />
         <MapBoundsFitter territories={territories} />
