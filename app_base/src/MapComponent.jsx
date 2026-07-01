@@ -24,7 +24,7 @@ function MapBoundsFitter({ territories }) {
 
 import CompassControl from './components/map/CompassControl';
 
-function ZoomTracker({ onZoomChange, onBoundsChange }) {
+function ZoomTracker({ onZoomChange, onBoundsChange, onCenterChange }) {
   const map = useMapEvents({
     zoomend: () => {
       onZoomChange(map.getZoom());
@@ -32,12 +32,14 @@ function ZoomTracker({ onZoomChange, onBoundsChange }) {
     },
     moveend: () => {
       if (onBoundsChange) onBoundsChange(map.getBounds());
+      if (onCenterChange) onCenterChange(map.getCenter());
     }
   });
   useEffect(() => {
     onZoomChange(map.getZoom());
     if (onBoundsChange) onBoundsChange(map.getBounds());
-  }, [map, onZoomChange, onBoundsChange]);
+    if (onCenterChange) onCenterChange(map.getCenter());
+  }, [map, onZoomChange, onBoundsChange, onCenterChange]);
   return null;
 }
 
@@ -306,6 +308,7 @@ function MapComponent() {
   const [territories, setTerritories] = useState([]);
   const [currentZoom, setCurrentZoom] = useState(16);
   const [mapBounds, setMapBounds] = useState(null);
+  const [currentCenter, setCurrentCenter] = useState([4.7425, -74.090]);
   const [userName, setUserName] = useState('');
   const [showPassword, setShowPassword] = useState(true);
   const [showNameModal, setShowNameModal] = useState(false);
@@ -316,8 +319,9 @@ function MapComponent() {
   const [editingName, setEditingName] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false);
   
-  // Capa de negocios
+  // Capa de negocios y Rotación
   const [businessLayerActive, setBusinessLayerActive] = useState(false);
+  const [isRotationEnabled, setIsRotationEnabled] = useState(false);
 
   useEffect(() => {
     socket.on('initial_state', (data) => {
@@ -363,12 +367,12 @@ function MapComponent() {
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <MapContainer center={[4.7425, -74.090]} zoom={16} minZoom={14} maxZoom={22} style={{ width: '100%', height: '100%', zIndex: 1 }} zoomControl={false} preferCanvas={true} rotate={true} touchRotate={false} rotateControl={{ closeOnZero: true, position: 'bottomleft' }}>
+      <MapContainer key={isRotationEnabled ? 'rot-on' : 'rot-off'} center={currentCenter} zoom={currentZoom} minZoom={14} maxZoom={22} style={{ width: '100%', height: '100%', zIndex: 1 }} zoomControl={false} preferCanvas={true} rotate={isRotationEnabled} touchRotate={false} rotateControl={{ closeOnZero: true, position: 'bottomleft' }}>
         <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxNativeZoom={19} />
-        <ZoomTracker onZoomChange={setCurrentZoom} onBoundsChange={setMapBounds} />
+        <ZoomTracker onZoomChange={setCurrentZoom} onBoundsChange={setMapBounds} onCenterChange={setCurrentCenter} />
         <MapBoundsFitter territories={territories} />
         <UserLocation />
-        <CompassControl />
+        {isRotationEnabled && <CompassControl />}
 
         {territories.map(territory => {
           let totalNormalParts = 0;
@@ -643,6 +647,18 @@ function MapComponent() {
           title="Capa de Negocios"
         >
           💼
+        </button>
+      </div>
+
+      {/* Botón de Rotación */}
+      <div style={{ position: 'absolute', top: 170, right: 15, zIndex: 10000 }}>
+        <button 
+          className="icon-btn"
+          style={{ background: isRotationEnabled ? '#3b82f6' : 'white', color: isRotationEnabled ? 'white' : 'black' }}
+          onClick={() => setIsRotationEnabled(!isRotationEnabled)}
+          title={isRotationEnabled ? "Desactivar rotación" : "Activar rotación"}
+        >
+          🧭
         </button>
       </div>
 

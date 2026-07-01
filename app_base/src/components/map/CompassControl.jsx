@@ -8,22 +8,12 @@ export default function CompassControl() {
   const [isDragging, setIsDragging] = React.useState(false);
 
   React.useEffect(() => {
-    // Explicitly disable two-finger touch rotation
-    if (map.touchRotate) {
-      map.touchRotate.disable();
-    }
-    // Explicitly enable device gyroscope rotation (compassBearing)
-    if (map.compassBearing) {
-      map.compassBearing.enable();
-    }
+
 
     const handleRotate = () => setBearing(map.getBearing());
     map.on('rotate', handleRotate);
     return () => {
       map.off('rotate', handleRotate);
-      if (map.compassBearing) {
-        map.compassBearing.disable();
-      }
     };
   }, [map]);
 
