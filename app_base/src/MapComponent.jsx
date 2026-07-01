@@ -363,7 +363,7 @@ function MapComponent() {
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <MapContainer center={[4.7425, -74.090]} zoom={16} minZoom={14} maxZoom={22} style={{ width: '100%', height: '100%', zIndex: 1 }} zoomControl={false} preferCanvas={true} rotate={true} touchRotate={false} rotateControl={{ closeOnZero: true }}>
+      <MapContainer center={[4.7425, -74.090]} zoom={16} minZoom={14} maxZoom={22} style={{ width: '100%', height: '100%', zIndex: 1 }} zoomControl={false} preferCanvas={true} rotate={true} touchRotate={false} rotateControl={{ closeOnZero: true, position: 'bottomleft' }}>
         <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxNativeZoom={19} />
         <ZoomTracker onZoomChange={setCurrentZoom} onBoundsChange={setMapBounds} />
         <MapBoundsFitter territories={territories} />

@@ -551,3 +551,4 @@ body, html, #root {
     font-size: 12px;
   }
 }
+.leaflet-bottom.leaflet-left { margin-bottom: 130px; margin-left: 10px; } 
