@@ -7,16 +7,16 @@ const path = require('path');
 
 const app = express();
 app.use(cors());
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname, '../dist')));
 
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*' }
 });
 
-const dataFile = path.join(__dirname, 'data.json');
-const mapasDir = path.join(__dirname, 'data', 'mapas');
-const logFile = path.join(__dirname, 'activity_log.json');
+const dataFile = path.join(__dirname, '../data/partStates.json');
+const mapasDir = path.join(__dirname, '../data/mapas');
+const logFile = path.join(__dirname, '../data/activityLog.json');
 
 if (!fs.existsSync(dataFile)) fs.writeFileSync(dataFile, JSON.stringify({}));
 if (!fs.existsSync(mapasDir)) fs.mkdirSync(mapasDir, { recursive: true });
