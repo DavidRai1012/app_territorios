@@ -552,3 +552,5 @@ body, html, #root {
   }
 }
 .leaflet-bottom.leaflet-left { margin-bottom: 130px; margin-left: 10px; } 
+  
+.rotation-disabled .leaflet-control-rotate { display: none !important; } 

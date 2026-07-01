@@ -43,6 +43,19 @@ function ZoomTracker({ onZoomChange, onBoundsChange, onCenterChange }) {
   return null;
 }
 
+function RotationManager({ enabled }) {
+  const map = useMap();
+  useEffect(() => {
+    if (enabled) {
+      if (map.touchRotate) map.touchRotate.enable();
+    } else {
+      if (map.touchRotate) map.touchRotate.disable();
+      if (map.compassBearing) map.compassBearing.disable();
+    }
+  }, [enabled, map]);
+  return null;
+}
+
 function TerritoryWatermark({ territory, currentZoom, businessLayerActive }) {
   if (!territory || !territory.limites) return null;
 
@@ -366,10 +379,11 @@ function MapComponent() {
   if (showDocxModal && !isReadOnly) return <DocxModal onClose={() => setShowDocxModal(false)} onGenerate={(y) => generateDocx(y, activityLog)} />;
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <MapContainer key={isRotationEnabled ? 'rot-on' : 'rot-off'} center={currentCenter} zoom={currentZoom} minZoom={14} maxZoom={22} style={{ width: '100%', height: '100%', zIndex: 1 }} zoomControl={false} preferCanvas={true} rotate={isRotationEnabled} touchRotate={false} rotateControl={{ closeOnZero: true, position: 'bottomleft' }}>
+    <div className={isRotationEnabled ? 'rotation-enabled' : 'rotation-disabled'} style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <MapContainer center={currentCenter} zoom={currentZoom} minZoom={14} maxZoom={22} style={{ width: '100%', height: '100%', zIndex: 1 }} zoomControl={false} preferCanvas={true} rotate={true} touchRotate={false} rotateControl={{ closeOnZero: true, position: 'bottomleft' }}>
         <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxNativeZoom={19} />
         <ZoomTracker onZoomChange={setCurrentZoom} onBoundsChange={setMapBounds} onCenterChange={setCurrentCenter} />
+        <RotationManager enabled={isRotationEnabled} />
         <MapBoundsFitter territories={territories} />
         <UserLocation />
         {isRotationEnabled && <CompassControl />}
