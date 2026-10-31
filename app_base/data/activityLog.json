@@ -292,5 +292,40 @@
     "date": "2026-06-18T01:37:09.200Z",
     "territoryNum": "32",
     "blockNum": "2"
+  },
+  {
+    "type": "completar_manzana",
+    "userName": "Esteban",
+    "date": "2026-10-23T18:14:50.153Z",
+    "territoryNum": "20",
+    "blockNum": "1"
+  },
+  {
+    "type": "completar_manzana",
+    "userName": "Esteban",
+    "date": "2026-10-23T18:14:57.487Z",
+    "territoryNum": "20",
+    "blockNum": "2"
+  },
+  {
+    "type": "completar_manzana",
+    "userName": "Esteban",
+    "date": "2026-10-23T18:15:00.069Z",
+    "territoryNum": "20",
+    "blockNum": "3"
+  },
+  {
+    "type": "completar_manzana",
+    "userName": "Esteban",
+    "date": "2026-10-23T18:15:01.936Z",
+    "territoryNum": "20",
+    "blockNum": "4"
+  },
+  {
+    "type": "territorio_completo",
+    "userName": "Esteban",
+    "date": "2026-10-23T18:15:01.936Z",
+    "territoryNum": "20",
+    "blockNum": null
   }
 ]

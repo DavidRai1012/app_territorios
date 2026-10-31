@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editor de Territorios y Manzanas</title>
+  
+  <!-- Leaflet & Leaflet Draw CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary: #7c3aed;
+      --primary-hover: #6d28d9;
+      --primary-light: #ede9fe;
+      --primary-border: #c4b5fd;
+      --surface: #ffffff;
+      --bg: #f8fafc;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    /* Sidebar */
+    #sidebar {
+      width: 380px;
+      min-width: 340px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+      box-shadow: 4px 0 15px rgba(0,0,0,0.03);
+    }
+
+    .sidebar-header {
+      padding: 18px 20px;
+      background: linear-gradient(135deg, #7c3aed, #581c87);
+      color: white;
+    }
+    .sidebar-header h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sidebar-header p {
+      margin: 4px 0 0;
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+
+    .sidebar-content {
+      padding: 16px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      outline: none;
+    }
+    input[type="text"]:focus, input[type="number"]:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.88rem;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: var(--primary-hover); }
+    .btn-secondary {
+      background: #f1f5f9;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .btn-success { background: var(--success); }
+    .btn-success:hover { background: #059669; }
+    .btn-sm { padding: 6px 10px; font-size: 0.78rem; width: auto; }
+
+    .radio-group {
+      display: flex;
+      gap: 8px;
+      background: var(--bg);
+      padding: 4px;
+      border-radius: 8px;
+    }
+    .radio-pill {
+      flex: 1;
+      text-align: center;
+    }
+    .radio-pill input { display: none; }
+    .radio-pill label {
+      display: block;
+      margin: 0;
+      padding: 8px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .radio-pill input:checked + label {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* Blocks list */
+    #blocks-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 220px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #blocks-list li {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.85rem;
+    }
+    #blocks-list li:hover {
+      background: var(--primary-light);
+      border-color: var(--primary-border);
+    }
+    .block-actions {
+      display: flex;
+      gap: 4px;
+    }
+    .btn-icon {
+      background: none;
+      border: none;
+      padding: 4px 6px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    .btn-icon:hover { background: rgba(0,0,0,0.06); }
+    .btn-icon.del:hover { background: #fee2e2; color: var(--danger); }
+
+    /* Map container */
+    #map-wrapper {
+      flex: 1;
+      height: 100%;
+      position: relative;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Search bar floating on map */
+    .map-search-box {
+      position: absolute;
+      top: 15px;
+      left: 60px;
+      z-index: 1000;
+      display: flex;
+      gap: 6px;
+      background: white;
+      padding: 6px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      width: 320px;
+    }
+    .map-search-box input {
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      flex: 1;
+      outline: none;
+    }
+    .map-search-box button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+
+    /* Manzana label styles on map */
+    .block-map-label {
+      background: rgba(124, 58, 237, 0.9) !important;
+      color: white !important;
+      border: 1px solid white !important;
+      border-radius: 12px !important;
+      font-weight: 700 !important;
+      font-size: 11px !important;
+      padding: 2px 7px !important;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2) !important;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.active { display: flex; }
+    .modal {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      width: 320px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    .modal h3 { margin: 0 0 12px; font-size: 1.05rem; }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <h1>🗺️ Editor de Territorios</h1>
+      <p>Dibuja, importa y edita manzanas con alto zoom</p>
+    </div>
+
+    <div class="sidebar-content">
+      <!-- 1. Cargar o crear -->
+      <div class="card">
+        <h2>📁 1. Archivo o Territorio</h2>
+        <label>Número de Territorio:</label>
+        <input type="text" id="territory-num" placeholder="Ej: 10" value="10">
+        
+        <label style="margin-top: 10px;">Cargar archivo .json existente:</label>
+        <input type="file" id="file-input" accept=".json" style="font-size: 0.8rem;">
+        <p style="font-size: 0.72rem; color: var(--text-muted); margin: 4px 0 0;">
+          💡 Puedes subir un archivo <code>territorio_X.json</code> existente para modificarlo y corregirlo.
+        </p>
+      </div>
+
+      <!-- 2. Modo de dibujo -->
+      <div class="card">
+        <h2>✏️ 2. Modo de Dibujo</h2>
+        <div class="radio-group">
+          <div class="radio-pill">
+            <input type="radio" id="mode-block" name="drawMode" value="block" checked>
+            <label for="mode-block">🏢 Manzanas</label>
+          </div>
+          <div class="radio-pill">
+            <input type="radio" id="mode-territory" name="drawMode" value="territory">
+            <label for="mode-territory">📐 Límite Exterior</label>
+          </div>
+        </div>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin: 8px 0 0;">
+          Usa la herramienta de <strong>Pentágono</strong> arriba a la izquierda del mapa para empezar a trazar.
+        </p>
+      </div>
+
+      <!-- 3. Lista de Manzanas -->
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h2 style="margin: 0;">📋 Manzanas (<span id="blocks-count">0</span>)</h2>
+          <button class="btn-sm btn-secondary" onclick="clearAllBlocks()">Limpiar</button>
+        </div>
+        <ul id="blocks-list">
+          <li style="color: var(--text-muted); justify-content: center; font-style: italic;">Sin manzanas dibujadas</li>
+        </ul>
+      </div>
+
+      <!-- 4. Exportar -->
+      <div class="card">
+        <h2>💾 3. Guardar Cambios</h2>
+        <button class="btn btn-success" id="export-btn">📥 Descargar territorio.json</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Map Area -->
+  <main id="map-wrapper">
+    <!-- Search box -->
+    <div class="map-search-box">
+      <input type="text" id="search-input" placeholder="Buscar dirección o barrio (ej: Suba)..." onkeydown="if(event.key==='Enter') searchAddress()">
+      <button onclick="searchAddress()">🔍</button>
+    </div>
+
+    <div id="map"></div>
+  </main>
+
+  <!-- Modal para asignar número de manzana -->
+  <div class="modal-backdrop" id="block-modal">
+    <div class="modal">
+      <h3>🏢 Nueva Manzana</h3>
+      <label>Número de Manzana:</label>
+      <input type="text" id="modal-block-num" placeholder="Ej: 1" autofocus>
+      <div style="display: flex; gap: 8px; margin-top: 15px;">
+        <button class="btn btn-secondary" onclick="cancelBlockModal()">Cancelar</button>
+        <button class="btn" onclick="confirmBlockModal()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet & Leaflet Draw Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+  <script>
+    // 1. Capas de mapa con Alto Zoom (Zoom 22 con overzoom)
+    const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      subdomains: 'abcd',
+      maxNativeZoom: 20,
+      maxZoom: 22
+    });
+
+    const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; Esri, Maxar, Earthstar Geographics',
+      maxNativeZoom: 19,
+      maxZoom: 22
+    });
+
+    const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxNativeZoom: 19,
+      maxZoom: 22
+    });
+
+    // 2. Inicializar Mapa centrado en Suba, Bogotá
+    const map = L.map('map', {
+      center: [4.745, -74.095],
+      zoom: 16,
+      minZoom: 12,
+      maxZoom: 22,
+      layers: [cartoVoyager]
+    });
+
+    // Control de Capas
+    const baseMaps = {
+      "🛵 Estilo Rappi / Urbano (CARTO)": cartoVoyager,
+      "🛰️ Satélite Alta Resolución (Esri)": esriSatellite,
+      "🗺️ OpenStreetMap": osmStandard
+    };
+    L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+    // Grupos de capas dibujadas
+    const drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    // Herramientas de Dibujo
+    const drawControl = new L.Control.Draw({
+      position: 'topleft',
+      draw: {
+        polygon: {
+          allowIntersection: false,
+          showArea: true,
+          shapeOptions: { color: '#7c3aed', weight: 3, fillOpacity: 0.15 }
+        },
+        polyline: false,
+        circle: false,
+        rectangle: false,
+        circlemarker: false,
+        marker: false
+      },
+      edit: {
+        featureGroup: drawnItems,
+        remove: false
+      }
+    });
+    map.addControl(drawControl);
+
+    // Estado
+    let blocks = []; // { id, number, layer }
+    let territoryBoundaryLayer = null;
+    let pendingLayer = null;
+
+    // Manejo de Creación de Polígonos
+    map.on(L.Draw.Event.CREATED, function (e) {
+      const layer = e.layer;
+      const mode = document.querySelector('input[name="drawMode"]:checked').value;
+
+      if (mode === 'territory') {
+        if (territoryBoundaryLayer) {
+          drawnItems.removeLayer(territoryBoundaryLayer);
+        }
+        layer.setStyle({ color: '#dc2626', weight: 3, dashArray: '6, 6', fillOpacity: 0.05 });
+        territoryBoundaryLayer = layer;
+        drawnItems.addLayer(layer);
+        alert("✅ Límite exterior del territorio definido.");
+      } else {
+        pendingLayer = layer;
+        // Autoincrementar sugerencia de número
+        const nextNum = blocks.length > 0 ? (Math.max(...blocks.map(b => parseInt(b.number) || 0)) + 1) : 1;
+        document.getElementById('modal-block-num').value = nextNum;
+        document.getElementById('block-modal').classList.add('active');
+        document.getElementById('modal-block-num').focus();
+      }
+    });
+
+    function confirmBlockModal() {
+      const num = document.getElementById('modal-block-num').value.trim() || (blocks.length + 1);
+      const layer = pendingLayer;
+      const id = 'b_' + Date.now();
+
+      layer.setStyle({ color: '#7c3aed', weight: 3, fillOpacity: 0.15 });
+      layer.bindTooltip("M " + num, { permanent: true, direction: "center", className: 'block-map-label' });
+      drawnItems.addLayer(layer);
+
+      blocks.push({ id, number: num, layer });
+      updateBlocksList();
+      cancelBlockModal();
+    }
+
+    function cancelBlockModal() {
+      document.getElementById('block-modal').classList.remove('active');
+      pendingLayer = null;
+    }
+
+    function updateBlocksList() {
+      const list = document.getElementById('blocks-list');
+      document.getElementById('blocks-count').innerText = blocks.length;
+
+      if (blocks.length === 0) {
+        list.innerHTML = '<li style="color: var(--text-muted); justify-content: center; font-style: italic;">Sin manzanas dibujadas</li>';
+        return;
+      }
+
+      list.innerHTML = '';
+      blocks.forEach(b => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <strong style="color: var(--primary);">Manzana ${b.number}</strong>
+          <div class="block-actions">
+            <button class="btn-icon" title="Centrar" onclick="focusBlock('${b.id}')">🎯</button>
+            <button class="btn-icon del" title="Eliminar" onclick="deleteBlock('${b.id}')">🗑️</button>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    function focusBlock(id) {
+      const b = blocks.find(x => x.id === id);
+      if (b) map.fitBounds(b.layer.getBounds(), { padding: [50, 50], maxZoom: 19 });
+    }
+
+    function deleteBlock(id) {
+      const idx = blocks.findIndex(x => x.id === id);
+      if (idx !== -1) {
+        drawnItems.removeLayer(blocks[idx].layer);
+        blocks.splice(idx, 1);
+        updateBlocksList();
+      }
+    }
+
+    function clearAllBlocks() {
+      if (!confirm("¿Eliminar todas las manzanas del mapa?")) return;
+      blocks.forEach(b => drawnItems.removeLayer(b.layer));
+      blocks = [];
+      updateBlocksList();
+    }
+
+    // Cargar archivo JSON existente
+    document.getElementById('file-input').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = JSON.parse(evt.target.result);
+          loadTerritoryData(data);
+        } catch (err) {
+          alert("Error al leer el archivo JSON: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    function loadTerritoryData(data) {
+      // Limpiar mapa previo
+      drawnItems.clearLayers();
+      blocks = [];
+      territoryBoundaryLayer = null;
+
+      if (data.numero_territorio) {
+        document.getElementById('territory-num').value = data.numero_territorio;
+      }
+
+      // 1. Cargar Límites del territorio
+      if (data.limites && data.limites.length > 0) {
+        territoryBoundaryLayer = L.polygon(data.limites, {
+          color: '#dc2626',
+          weight: 3,
+          dashArray: '6, 6',
+          fillOpacity: 0.05
+        });
+        drawnItems.addLayer(territoryBoundaryLayer);
+      }
+
+      // 2. Cargar Manzanas
+      if (data.manzanas && Array.isArray(data.manzanas)) {
+        data.manzanas.forEach(m => {
+          const layer = L.polygon(m.puntos, {
+            color: '#7c3aed',
+            weight: 3,
+            fillOpacity: 0.15
+          });
+          layer.bindTooltip("M " + m.numero, { permanent: true, direction: "center", className: 'block-map-label' });
+          drawnItems.addLayer(layer);
+          blocks.push({
+            id: m.id || ('b_' + Date.now() + Math.random()),
+            number: m.numero,
+            layer: layer
+          });
+        });
+      }
+
+      updateBlocksList();
+
+      if (drawnItems.getBounds().isValid()) {
+        map.fitBounds(drawnItems.getBounds(), { padding: [40, 40] });
+      }
+      alert(`✅ Se cargó el Territorio ${data.numero_territorio || ''} con ${blocks.length} manzanas.`);
+    }
+
+    // Buscador de Direcciones usando Nominatim OSM
+    async function searchAddress() {
+      const q = document.getElementById('search-input').value.trim();
+      if (!q) return;
+
+      const query = q.toLowerCase().includes('bogota') || q.toLowerCase().includes('colombia') ? q : `${q}, Bogotá, Colombia`;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+        const results = await res.json();
+        if (results && results.length > 0) {
+          const first = results[0];
+          map.setView([parseFloat(first.lat), parseFloat(first.lon)], 17);
+        } else {
+          alert("No se encontró esa dirección.");
+        }
+      } catch (e) {
+        alert("Error de conexión al buscar dirección.");
+      }
+    }
+
+    // Exportar JSON
+    document.getElementById('export-btn').addEventListener('click', function() {
+      const terrNum = document.getElementById('territory-num').value.trim();
+      if (!terrNum) {
+        alert("Por favor ingresa el número del territorio.");
+        return;
+      }
+
+      if (blocks.length === 0) {
+        alert("Debes tener al menos 1 manzana dibujada.");
+        return;
+      }
+
+      if (!territoryBoundaryLayer) {
+        alert("Debes dibujar el límite exterior del territorio (selecciona 'Límite Exterior' y traza el polígono).");
+        return;
+      }
+
+      const boundaryLatLngs = territoryBoundaryLayer.getLatLngs()[0];
+      const limitsArr = boundaryLatLngs.map(ll => [ll.lat, ll.lng]);
+
+      const exportData = {
+        territorio_id: "T" + terrNum,
+        numero_territorio: terrNum,
+        limites: limitsArr,
+        manzanas: blocks.map((b, i) => {
+          const latlngs = b.layer.getLatLngs()[0];
+          return {
+            id: `m_${b.number}_b${Date.now()}_${i}`,
+            numero: b.number,
+            puntos: latlngs.map(ll => [ll.lat, ll.lng])
+          };
+        })
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+      const a = document.createElement('a');
+      a.setAttribute("href", dataStr);
+      a.setAttribute("download", `territorio_${terrNum}.json`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+  </script>
+</body>
+</html>

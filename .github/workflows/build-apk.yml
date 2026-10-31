@@ -1,0 +1,55 @@
+name: Generar APK Android
+
+on:
+  push:
+    branches: [ main, prueba-giroscopio ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Compilar APK de Territorios
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Descargar Codigo
+        uses: actions/checkout@v4
+
+      - name: 2. Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 3. Configurar Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 4. Instalar Dependencias y Compilar Web
+        run: |
+          cd app_base
+          npm install --legacy-peer-deps
+          npm install --save-dev @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
+          npm run build
+
+      - name: 5. Inicializar Proyecto Android con Capacitor
+        run: |
+          cd app_base
+          npx cap add android
+          # Anadir permisos de GPS si no estan en AndroidManifest.xml
+          sed -i '/<\/manifest>/i \    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" />' android/app/src/main/AndroidManifest.xml
+          npx cap sync android
+
+      - name: 6. Compilar APK con Gradle
+        run: |
+          cd app_base/android
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      - name: 7. Publicar APK para Descarga
+        uses: actions/upload-artifact@v4
+        with:
+          name: Territorios-App
+          path: app_base/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30

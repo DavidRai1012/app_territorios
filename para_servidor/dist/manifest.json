@@ -1,0 +1,9 @@
+{
+  "short_name": "Territorios",
+  "name": "Visor de Territorios",
+  "start_url": "/",
+  "background_color": "#7c3aed",
+  "theme_color": "#7c3aed",
+  "display": "standalone",
+  "orientation": "any"
+}
