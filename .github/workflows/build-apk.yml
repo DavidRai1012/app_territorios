@@ -36,8 +36,21 @@ jobs:
         run: |
           cd app_base
           npx cap add android
-          # Anadir permisos de GPS si no estan en AndroidManifest.xml
+
+          # Anadir permisos de GPS
           sed -i '/<\/manifest>/i \    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" />' android/app/src/main/AndroidManifest.xml
+
+          # Resolver duplicidad de librerias de Kotlin entre modulos
+          cat << 'EOF' >> android/build.gradle
+
+subprojects {
+    configurations.all {
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+    }
+}
+EOF
+
           npx cap sync android
 
       - name: 6. Compilar APK con Gradle
