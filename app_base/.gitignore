@@ -1,8 +1,8 @@
 node_modules/
+dist/
+android/
 node_env/
 node.zip
 cloudflared.exe
-/dist/
 .env
 .DS_Store
-!para_servidor/dist/
