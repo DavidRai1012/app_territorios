@@ -1,462 +1,425 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { MapContainer, TileLayer, Polygon, Tooltip, Marker, useMap, Circle } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import 'leaflet-rotate';
-import { getAllLocalTerritories } from './utils/territoriesLoader';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import MapLibreMap from './components/MapLibreMap';
+import FilterDrawer from './components/FilterDrawer';
+import TerritoryDetailSheet from './components/TerritoryDetailSheet';
+import SettingsModal from './components/SettingsModal';
+import { STORAGE_KEYS, APP_THEMES } from './config/mapa';
+import defaultBundle from './data/territorios.json';
+import { generateDemoTerritories } from './utils/geoUtils';
 
-// Estilos de Mosaicos (Map Tiles)
-const TILE_LAYERS = {
-  rappi: {
-    name: 'Estilo Rappi (Limpio)',
-    icon: '🛵',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; OpenStreetMap &copy; CARTO',
-    subdomains: 'abcd',
-    maxNativeZoom: 20,
-    maxZoom: 22
-  },
-  satellite: {
-    name: 'Satélite Alta Resolución',
-    icon: '🛰️',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: '&copy; Esri, Maxar, Earthstar Geographics',
-    maxNativeZoom: 19,
-    maxZoom: 22
-  },
-  streets: {
-    name: 'Calles Estándar',
-    icon: '🗺️',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; OpenStreetMap',
-    maxNativeZoom: 19,
-    maxZoom: 22
-  }
-};
-
-// Componente para ajustar la cámara del mapa
-function MapCameraHandler({ targetBounds }) {
-  const map = useMap();
-  useEffect(() => {
-    if (targetBounds && targetBounds.isValid && targetBounds.isValid()) {
-      map.fitBounds(targetBounds, { padding: [40, 40], maxZoom: 19, animate: true, duration: 0.8 });
+export default function SimpleMapViewer() {
+  // 1. Cargar territorios (localStorage o fábrica)
+  const [territories, setTerritories] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.TERRITORIOS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Error leyendo territorios de storage:', e);
     }
-  }, [targetBounds, map]);
-  return null;
-}
+    return defaultBundle.territorios || [];
+  });
 
-// Icono personalizado para ubicación del usuario (Punto morado pulsante)
-const userLocationIcon = L.divIcon({
-  className: 'user-gps-pulse-marker',
-  html: `<div class="gps-pulse-ring"></div><div class="gps-pulse-dot"></div>`,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12]
-});
-
-export default function SimpleMapViewer({ onSwitchToAdmin }) {
-  // 1. Cargar todos los territorios locales empaquetados
-  const allTerritories = useMemo(() => getAllLocalTerritories(), []);
-
-  // 2. Estado de selección de territorios (por defecto todos seleccionados)
+  // 2. Selección de territorios activos
   const [selectedIds, setSelectedIds] = useState(() => {
-    return new Set(allTerritories.map(t => t.numero_territorio));
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.SELECTED_IDS);
+      if (saved) {
+        const arr = JSON.parse(saved);
+        if (Array.isArray(arr)) return new Set(arr);
+      }
+    } catch (e) {}
+    return new Set((defaultBundle.territorios || []).map(t => t.id));
   });
 
-  // 3. Capa de mapa activa (Rappi por defecto)
-  const [activeLayerKey, setActiveLayerKey] = useState('rappi');
+  // 3. Tema de color (por defecto 'morado')
+  const [themeId, setThemeId] = useState(() => {
+    return localStorage.getItem(STORAGE_KEYS.THEME) || 'morado';
+  });
 
-  // 4. Estados de interfaz
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [targetBounds, setTargetBounds] = useState(null);
+  // 4. Modo oscuro ('light' | 'dark' | 'auto')
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem(STORAGE_KEYS.DARK_MODE) || 'auto';
+  });
 
-  // 5. GPS / Ubicación opcional
-  const [isGpsActive, setIsGpsActive] = useState(false);
-  const [userLocation, setUserLocation] = useState(null);
-  const [userAccuracy, setUserAccuracy] = useState(null);
-  const watchIdRef = useRef(null);
+  // 5. Capa base ('calles' | 'sat')
+  const [baseMapType, setBaseMapType] = useState(() => {
+    return localStorage.getItem(STORAGE_KEYS.MAP_STYLE) || 'calles';
+  });
 
-  // 6. Brújula / Giroscopio opcional
-  const [isCompassActive, setIsCompassActive] = useState(false);
-  const [compassHeading, setCompassHeading] = useState(0);
+  // 6. Inclinación 3D habilitada
+  const [tiltEnabled, setTiltEnabled] = useState(() => {
+    const val = localStorage.getItem(STORAGE_KEYS.MAP_TILT);
+    return val !== null ? val === 'true' : true;
+  });
 
-  // Calcular límites de todos los territorios seleccionados para centrar al inicio
+  // 7. Auto-encuadrar al cambiar filtros
+  const [autoFitEnabled, setAutoFitEnabled] = useState(() => {
+    const val = localStorage.getItem(STORAGE_KEYS.AUTO_FIT);
+    return val !== null ? val === 'true' : true;
+  });
+
+  // 8. Grupos de territorios
+  const [groups, setGroups] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.GROUPS);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return defaultBundle.grupos || [];
+  });
+
+  // Estados de modales y hojas
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [selectedTerritoryDetail, setSelectedTerritoryDetail] = useState(null);
+  const [autoFitTrigger, setAutoFitTrigger] = useState(1);
+  const [hasDemoData, setHasDemoData] = useState(() => {
+    return territories.some(t => t.id && t.id.startsWith('demo-'));
+  });
+
+  // Aplicar tema de color en <html> y barra de estado
   useEffect(() => {
-    if (allTerritories.length > 0) {
-      const allCoords = [];
-      allTerritories.forEach(t => {
-        if (t.limites) t.limites.forEach(pt => allCoords.push(pt));
-      });
-      if (allCoords.length > 0) {
-        setTargetBounds(L.latLngBounds(allCoords));
-      }
-    }
-  }, [allTerritories]);
+    const theme = APP_THEMES.find(t => t.id === themeId) || APP_THEMES[0];
+    document.documentElement.setAttribute('data-color', theme.id);
+    document.documentElement.style.setProperty('--primary', theme.color);
+    document.documentElement.style.setProperty('--primary-hover', theme.hover);
+    document.documentElement.style.setProperty('--primary-light', theme.light);
+    document.documentElement.style.setProperty('--primary-border', theme.border);
 
-  // Manejar activación / desactivación de GPS
-  const toggleGps = () => {
-    if (isGpsActive) {
-      if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-      setIsGpsActive(false);
-      setUserLocation(null);
-    } else {
-      if (!navigator.geolocation) {
-        alert("La geolocalización no es compatible con este dispositivo.");
-        return;
-      }
-      setIsGpsActive(true);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          setUserLocation([lat, lng]);
-          setUserAccuracy(pos.coords.accuracy);
-          setTargetBounds(L.latLngBounds([[lat - 0.002, lng - 0.002], [lat + 0.002, lng + 0.002]]));
-        },
-        (err) => {
-          console.warn("Error GPS:", err);
-          alert("No se pudo obtener la ubicación. Verifica los permisos de GPS.");
-          setIsGpsActive(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) metaTheme.setAttribute('content', theme.color);
 
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        (pos) => {
-          setUserLocation([pos.coords.latitude, pos.coords.longitude]);
-          setUserAccuracy(pos.coords.accuracy);
-        },
-        null,
-        { enableHighAccuracy: true }
-      );
-    }
-  };
+    localStorage.setItem(STORAGE_KEYS.THEME, themeId);
+  }, [themeId]);
 
-  // Manejar activación / desactivación de Brújula / Giroscopio
-  const toggleCompass = () => {
-    if (isCompassActive) {
-      setIsCompassActive(false);
-      setCompassHeading(0);
-    } else {
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission()
-          .then(permissionState => {
-            if (permissionState === 'granted') {
-              setIsCompassActive(true);
-            } else {
-              alert("Permiso de orientación denegado.");
-            }
-          })
-          .catch(console.error);
-      } else {
-        setIsCompassActive(true);
-      }
-    }
-  };
-
+  // Aplicar modo oscuro
   useEffect(() => {
-    if (!isCompassActive) return;
+    document.documentElement.setAttribute('data-dark-mode', darkMode);
+    localStorage.setItem(STORAGE_KEYS.DARK_MODE, darkMode);
+  }, [darkMode]);
 
-    const handleOrientation = (e) => {
-      let heading = e.webkitCompassHeading || e.alpha;
-      if (heading !== undefined && heading !== null) {
-        setCompassHeading(Math.round(heading));
-      }
-    };
+  // Persistir selección
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.SELECTED_IDS, JSON.stringify(Array.from(selectedIds)));
+    } catch (e) {}
+  }, [selectedIds]);
 
-    window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-    window.addEventListener('deviceorientation', handleOrientation, true);
+  // Manejadores de selección
+  const toggleTerritory = useCallback((id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    if (autoFitEnabled) setAutoFitTrigger(c => c + 1);
+  }, [autoFitEnabled]);
 
-    return () => {
-      window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
-      window.removeEventListener('deviceorientation', handleOrientation, true);
-    };
-  }, [isCompassActive]);
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(territories.map(t => t.id)));
+    if (autoFitEnabled) setAutoFitTrigger(c => c + 1);
+  }, [territories, autoFitEnabled]);
 
-  // Acciones de Selección de Territorios
-  const selectAll = () => {
-    setSelectedIds(new Set(allTerritories.map(t => t.numero_territorio)));
-  };
-
-  const clearSelection = () => {
+  const clearAll = useCallback(() => {
     setSelectedIds(new Set());
-  };
+  }, []);
 
-  const toggleTerritory = (num) => {
-    const next = new Set(selectedIds);
-    if (next.has(num)) {
-      next.delete(num);
+  const invertSelection = useCallback(() => {
+    setSelectedIds(prev => {
+      const next = new Set();
+      territories.forEach(t => {
+        if (!prev.has(t.id)) next.add(t.id);
+      });
+      return next;
+    });
+    if (autoFitEnabled) setAutoFitTrigger(c => c + 1);
+  }, [territories, autoFitEnabled]);
+
+  // Ver sólo un territorio (para días especiales)
+  const handleToggleSolo = useCallback((t) => {
+    if (!t) return;
+    const isSingle = selectedIds.size === 1 && selectedIds.has(t.id);
+    if (isSingle) {
+      // Restaurar todos
+      selectAll();
     } else {
-      next.add(num);
+      // Dejar sólo este
+      setSelectedIds(new Set([t.id]));
+      setAutoFitTrigger(c => c + 1);
     }
-    setSelectedIds(next);
+  }, [selectedIds, selectAll]);
+
+  // Navegación Anterior / Siguiente en la Ficha
+  const currentDetailIndex = useMemo(() => {
+    if (!selectedTerritoryDetail) return -1;
+    return territories.findIndex(t => t.id === selectedTerritoryDetail.id);
+  }, [selectedTerritoryDetail, territories]);
+
+  const handlePrevTerritory = () => {
+    if (currentDetailIndex > 0) {
+      const prev = territories[currentDetailIndex - 1];
+      setSelectedTerritoryDetail(prev);
+      if (selectedIds.size === 1) {
+        setSelectedIds(new Set([prev.id]));
+        setAutoFitTrigger(c => c + 1);
+      }
+    }
   };
 
-  // "Día especial": Ver únicamente este territorio y hacer zoom a él
-  const focusSingleTerritory = (t) => {
-    setSelectedIds(new Set([t.numero_territorio]));
-    setIsDrawerOpen(false);
-    if (t.limites && t.limites.length > 0) {
-      setTargetBounds(L.latLngBounds(t.limites));
+  const handleNextTerritory = () => {
+    if (currentDetailIndex < territories.length - 1) {
+      const next = territories[currentDetailIndex + 1];
+      setSelectedTerritoryDetail(next);
+      if (selectedIds.size === 1) {
+        setSelectedIds(new Set([next.id]));
+        setAutoFitTrigger(c => c + 1);
+      }
     }
   };
 
-  // Filtrado de territorios para el panel
-  const filteredTerritories = allTerritories.filter(t => {
-    const q = searchTerm.toLowerCase().trim();
-    if (!q) return true;
-    return `territorio ${t.numero_territorio}`.toLowerCase().includes(q) || t.numero_territorio.includes(q);
-  });
+  // Guardar y Aplicar Grupos
+  const handleSaveGroup = (name) => {
+    const newGroup = {
+      id: 'grp-' + Date.now(),
+      nombre: name,
+      territorios: Array.from(selectedIds)
+    };
+    const updated = [...groups, newGroup];
+    setGroups(updated);
+    localStorage.setItem(STORAGE_KEYS.GROUPS, JSON.stringify(updated));
+  };
 
-  const activeLayer = TILE_LAYERS[activeLayerKey] || TILE_LAYERS.rappi;
+  const handleApplyGroup = (grp) => {
+    if (grp && Array.isArray(grp.territorios)) {
+      setSelectedIds(new Set(grp.territorios));
+      setAutoFitTrigger(c => c + 1);
+      setIsFilterOpen(false);
+    }
+  };
+
+  const handleDeleteGroup = (id) => {
+    const updated = groups.filter(g => g.id !== id);
+    setGroups(updated);
+    localStorage.setItem(STORAGE_KEYS.GROUPS, JSON.stringify(updated));
+  };
+
+  // Importar / Exportar / Restaurar datos
+  const handleImportFile = (newList, mode) => {
+    let finalTerritories = [];
+    if (mode === 'replace') {
+      finalTerritories = newList;
+    } else {
+      // merge por id
+      const map = new Map();
+      territories.forEach(t => map.set(t.id, t));
+      newList.forEach(t => map.set(t.id, t));
+      finalTerritories = Array.from(map.values());
+    }
+
+    setTerritories(finalTerritories);
+    setSelectedIds(new Set(finalTerritories.map(t => t.id)));
+    localStorage.setItem(STORAGE_KEYS.TERRITORIOS, JSON.stringify(finalTerritories));
+    setAutoFitTrigger(c => c + 1);
+    setIsSettingsOpen(false);
+    alert(`✅ Importación completada. Total de territorios: ${finalTerritories.length}`);
+  };
+
+  const handleExportJSON = () => {
+    const bundle = {
+      version: 3,
+      actualizado: new Date().toISOString().split('T')[0],
+      grupos: groups,
+      territorios: territories
+    };
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `territorios_v3_${bundle.actualizado}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleRestoreFactory = () => {
+    if (!confirm('¿Restaurar los 13 territorios de fábrica originales?')) return;
+    localStorage.removeItem(STORAGE_KEYS.TERRITORIOS);
+    const factory = defaultBundle.territorios || [];
+    setTerritories(factory);
+    setSelectedIds(new Set(factory.map(t => t.id)));
+    setHasDemoData(false);
+    setAutoFitTrigger(c => c + 1);
+    setIsSettingsOpen(false);
+  };
+
+  const handleToggleDemoData = () => {
+    if (hasDemoData) {
+      // Quitar demos
+      const withoutDemo = territories.filter(t => !t.id.startsWith('demo-'));
+      setTerritories(withoutDemo);
+      setSelectedIds(new Set(withoutDemo.map(t => t.id)));
+      localStorage.setItem(STORAGE_KEYS.TERRITORIOS, JSON.stringify(withoutDemo));
+      setHasDemoData(false);
+    } else {
+      // Cargar 18 demos
+      const demos = generateDemoTerritories();
+      const combined = [...territories.filter(t => !t.id.startsWith('demo-')), ...demos];
+      setTerritories(combined);
+      setSelectedIds(new Set(combined.map(t => t.id)));
+      localStorage.setItem(STORAGE_KEYS.TERRITORIOS, JSON.stringify(combined));
+      setHasDemoData(true);
+    }
+    setAutoFitTrigger(c => c + 1);
+    setIsSettingsOpen(false);
+  };
+
+  // Subtítulo de cabecera
+  const subtitle = useMemo(() => {
+    if (selectedIds.size === territories.length) {
+      return `Mostrando todos (${territories.length})`;
+    }
+    if (selectedIds.size === 1) {
+      const singleId = Array.from(selectedIds)[0];
+      const single = territories.find(t => t.id === singleId);
+      return single ? single.nombre : '1 seleccionado';
+    }
+    return `${selectedIds.size} de ${territories.length} seleccionados`;
+  }, [selectedIds, territories]);
+
+  const activeTheme = APP_THEMES.find(t => t.id === themeId) || APP_THEMES[0];
 
   return (
-    <div className="simple-viewer-root">
-      {/* Barra Superior Morada */}
-      <header className="viewer-header">
-        <div className="viewer-brand">
-          <span className="brand-logo">📍</span>
-          <div>
-            <h1 className="brand-title">Territorios</h1>
-            <span className="brand-subtitle">
-              {selectedIds.size === allTerritories.length
-                ? `Mostrando todos (${allTerritories.length})`
-                : selectedIds.size === 1
-                ? `Territorio ${Array.from(selectedIds)[0]}`
-                : `${selectedIds.size} de ${allTerritories.length} seleccionados`}
-            </span>
+    <div className="app-viewport-root">
+      {/* 1. Cabecera Principal */}
+      <header className="app-topbar">
+        <div className="topbar-brand">
+          <span className="brand-icon">🗺️</span>
+          <div className="brand-texts">
+            <h1 className="brand-heading">Territorios</h1>
+            <span className="brand-subtext">{subtitle}</span>
           </div>
         </div>
 
-        <div className="header-actions">
-          {/* Botón Filtro de Territorios */}
-          <button 
-            className="header-pill-btn"
-            onClick={() => setIsDrawerOpen(true)}
-            title="Seleccionar territorios"
+        <div className="topbar-actions">
+          {/* Conmutador Calles / Satélite */}
+          <button
+            className="topbar-pill-btn"
+            onClick={() => {
+              const next = baseMapType === 'calles' ? 'sat' : 'calles';
+              setBaseMapType(next);
+              localStorage.setItem(STORAGE_KEYS.MAP_STYLE, next);
+            }}
+            title="Cambiar mapa base"
           >
-            🗺️ Filtrar ({selectedIds.size})
+            {baseMapType === 'calles' ? '🗺️ Calles' : '🛰️ Satélite'}
           </button>
 
-          {/* Botón de acceso al editor o administración */}
-          {onSwitchToAdmin && (
-            <button 
-              className="header-pill-btn btn-subtle"
-              onClick={onSwitchToAdmin}
-              title="Modo Gestión y Sincronización"
-            >
-              ⚙️
-            </button>
-          )}
+          {/* Botón Filtro */}
+          <button
+            className="topbar-pill-btn"
+            onClick={() => setIsFilterOpen(true)}
+            title="Filtrar territorios"
+          >
+            🔍 ({selectedIds.size})
+          </button>
+
+          {/* Botón ⚙️ Ajustes */}
+          <button
+            className="topbar-icon-btn"
+            onClick={() => setIsSettingsOpen(true)}
+            title="Ajustes de la app"
+          >
+            ⚙️
+          </button>
         </div>
       </header>
 
-      {/* Contenedor del Mapa con Zoom Profundo (maxZoom 22) */}
-      <div className="map-viewport">
-        <MapContainer
-          center={[4.745, -74.095]}
-          zoom={15}
-          minZoom={12}
-          maxZoom={22}
-          zoomControl={false}
-          preferCanvas={true}
-          style={{ width: '100%', height: '100%' }}
-        >
-          {/* Mosaico de Mapa seleccionado (Rappi / Satélite / Calles) */}
-          <TileLayer
-            key={activeLayerKey}
-            url={activeLayer.url}
-            attribution={activeLayer.attribution}
-            subdomains={activeLayer.subdomains || 'abc'}
-            maxNativeZoom={activeLayer.maxNativeZoom}
-            maxZoom={activeLayer.maxZoom}
-          />
+      {/* 2. Mapa Principal con MapLibre GL */}
+      <main className="app-map-area">
+        <MapLibreMap
+          territories={territories}
+          selectedIds={selectedIds}
+          onSelectTerritory={(t) => setSelectedTerritoryDetail(t)}
+          baseMapType={baseMapType}
+          tiltEnabled={tiltEnabled}
+          autoFitTrigger={autoFitTrigger}
+          themeColor={activeTheme.color}
+        />
+      </main>
 
-          <MapCameraHandler targetBounds={targetBounds} />
+      {/* 3. Panel de Filtros */}
+      <FilterDrawer
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        territories={territories}
+        selectedIds={selectedIds}
+        onToggleTerritory={toggleTerritory}
+        onSelectAll={selectAll}
+        onClearAll={clearAll}
+        onInvertSelection={invertSelection}
+        groups={groups}
+        onSaveGroup={handleSaveGroup}
+        onApplyGroup={handleApplyGroup}
+        onDeleteGroup={handleDeleteGroup}
+      />
 
-          {/* Renderizado de Territorios y Manzanas seleccionadas */}
-          {allTerritories.map(territory => {
-            const isVisible = selectedIds.has(territory.numero_territorio);
-            if (!isVisible) return null;
+      {/* 4. Ficha de Territorio */}
+      <TerritoryDetailSheet
+        territory={selectedTerritoryDetail}
+        onClose={() => setSelectedTerritoryDetail(null)}
+        onFitBounds={() => {
+          if (selectedTerritoryDetail) {
+            setSelectedIds(new Set([selectedTerritoryDetail.id]));
+            setAutoFitTrigger(c => c + 1);
+          }
+        }}
+        isSingleSelected={
+          selectedTerritoryDetail
+            ? selectedIds.size === 1 && selectedIds.has(selectedTerritoryDetail.id)
+            : false
+        }
+        onToggleSolo={() => handleToggleSolo(selectedTerritoryDetail)}
+        onPrev={handlePrevTerritory}
+        onNext={handleNextTerritory}
+        hasPrev={currentDetailIndex > 0}
+        hasNext={currentDetailIndex < territories.length - 1}
+      />
 
-            return (
-              <React.Fragment key={territory.territorio_id || territory.numero_territorio}>
-                {/* Límite exterior del Territorio en Morado */}
-                {territory.limites && territory.limites.length > 0 && (
-                  <Polygon
-                    positions={territory.limites}
-                    pathOptions={{
-                      color: '#7c3aed',
-                      weight: 3,
-                      fillColor: '#7c3aed',
-                      fillOpacity: 0.03,
-                      dashArray: selectedIds.size === 1 ? null : '4, 4'
-                    }}
-                  >
-                    <Tooltip permanent direction="top" className="territory-badge-label">
-                      T{territory.numero_territorio}
-                    </Tooltip>
-                  </Polygon>
-                )}
-
-                {/* Manzanas interiores */}
-                {territory.manzanas && territory.manzanas.map(m => {
-                  if (!m.puntos || m.puntos.length === 0) return null;
-                  return (
-                    <Polygon
-                      key={m.id || m.numero}
-                      positions={m.puntos}
-                      pathOptions={{
-                        color: '#6d28d9',
-                        weight: 2,
-                        fillColor: '#8b5cf6',
-                        fillOpacity: 0.15
-                      }}
-                    >
-                      <Tooltip permanent direction="center" className="manzana-num-badge">
-                        {m.numero}
-                      </Tooltip>
-                    </Polygon>
-                  );
-                })}
-              </React.Fragment>
-            );
-          })}
-
-          {/* Marcador GPS de Ubicación del Usuario */}
-          {userLocation && (
-            <>
-              <Marker position={userLocation} icon={userLocationIcon} />
-              {userAccuracy && (
-                <Circle
-                  center={userLocation}
-                  radius={userAccuracy}
-                  pathOptions={{ color: '#7c3aed', fillColor: '#8b5cf6', fillOpacity: 0.1, weight: 1 }}
-                />
-              )}
-            </>
-          )}
-        </MapContainer>
-
-        {/* Botones Flotantes Flotantes en el Mapa */}
-        <div className="map-floating-controls">
-          {/* 1. Selector de Capas (Rappi / Satélite / Calles) */}
-          <div className="floating-layer-switcher">
-            {Object.keys(TILE_LAYERS).map(key => (
-              <button
-                key={key}
-                className={`layer-switch-btn ${activeLayerKey === key ? 'active' : ''}`}
-                onClick={() => setActiveLayerKey(key)}
-                title={TILE_LAYERS[key].name}
-              >
-                {TILE_LAYERS[key].icon}
-              </button>
-            ))}
-          </div>
-
-          {/* 2. Botón GPS Opcional */}
-          <button
-            className={`map-round-btn ${isGpsActive ? 'active-purple' : ''}`}
-            onClick={toggleGps}
-            title={isGpsActive ? "Desactivar GPS" : "Ver mi ubicación"}
-          >
-            🎯
-          </button>
-
-          {/* 3. Botón Brújula / Giroscopio Opcional */}
-          <button
-            className={`map-round-btn ${isCompassActive ? 'active-purple' : ''}`}
-            onClick={toggleCompass}
-            title={isCompassActive ? `Brújula activa (${compassHeading}°)` : "Activar brújula"}
-          >
-            🧭
-          </button>
-        </div>
-
-        {/* Indicador de rumbo de Brújula si está activa */}
-        {isCompassActive && (
-          <div className="compass-heading-badge" style={{ transform: `rotate(${-compassHeading}deg)` }}>
-            ⬆️ N ({compassHeading}°)
-          </div>
-        )}
-      </div>
-
-      {/* Panel / Drawer de Selección de Territorios */}
-      {isDrawerOpen && (
-        <div className="drawer-overlay" onClick={() => setIsDrawerOpen(false)}>
-          <div className="territory-drawer" onClick={e => e.stopPropagation()}>
-            <div className="drawer-header">
-              <h2>🗺️ Seleccionar Territorios</h2>
-              <button className="drawer-close-btn" onClick={() => setIsDrawerOpen(false)}>✕</button>
-            </div>
-
-            {/* Buscador */}
-            <div className="drawer-search-box">
-              <input
-                type="text"
-                placeholder="Buscar número (ej: 10)..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            {/* Acciones Rápidas */}
-            <div className="drawer-quick-actions">
-              <button className="quick-btn" onClick={selectAll}>
-                ✅ Ver Todos ({allTerritories.length})
-              </button>
-              <button className="quick-btn btn-outline" onClick={clearSelection}>
-                ❌ Limpiar
-              </button>
-            </div>
-
-            {/* Lista de Territorios con opción para 'Días especiales' */}
-            <div className="territories-grid">
-              {filteredTerritories.map(t => {
-                const isSelected = selectedIds.has(t.numero_territorio);
-                const blockCount = t.manzanas ? t.manzanas.length : 0;
-
-                return (
-                  <div
-                    key={t.numero_territorio}
-                    className={`territory-card-item ${isSelected ? 'selected' : ''}`}
-                  >
-                    <div 
-                      className="territory-card-main"
-                      onClick={() => toggleTerritory(t.numero_territorio)}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => {}}
-                        aria-label={`Territorio ${t.numero_territorio}`}
-                      />
-                      <span className="t-card-name">Territorio {t.numero_territorio}</span>
-                      <span className="t-card-blocks">{blockCount} mznas</span>
-                    </div>
-
-                    {/* Botón 'Solo este' para días especiales */}
-                    <button
-                      className="t-solo-btn"
-                      onClick={() => focusSingleTerritory(t)}
-                      title="Ver únicamente este territorio en el mapa"
-                    >
-                      Ver solo
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="drawer-footer">
-              <button className="btn-done" onClick={() => setIsDrawerOpen(false)}>
-                Listo ({selectedIds.size} seleccionados)
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 5. Modal de Ajustes */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        themeId={themeId}
+        onSelectTheme={setThemeId}
+        darkMode={darkMode}
+        onSelectDarkMode={setDarkMode}
+        defaultBaseMap={baseMapType}
+        onSelectDefaultBaseMap={(st) => {
+          setBaseMapType(st);
+          localStorage.setItem(STORAGE_KEYS.MAP_STYLE, st);
+        }}
+        tiltEnabled={tiltEnabled}
+        onToggleTilt={(val) => {
+          setTiltEnabled(val);
+          localStorage.setItem(STORAGE_KEYS.MAP_TILT, String(val));
+        }}
+        autoFitEnabled={autoFitEnabled}
+        onToggleAutoFit={(val) => {
+          setAutoFitEnabled(val);
+          localStorage.setItem(STORAGE_KEYS.AUTO_FIT, String(val));
+        }}
+        onImportFile={handleImportFile}
+        onExportJSON={handleExportJSON}
+        onRestoreFactory={handleRestoreFactory}
+        onToggleDemoData={handleToggleDemoData}
+        hasDemoData={hasDemoData}
+        dataVersionDate={defaultBundle.actualizado}
+        territoriesCount={territories.length}
+      />
     </div>
   );
 }

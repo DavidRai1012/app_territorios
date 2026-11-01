@@ -1,664 +1,867 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Editor de Territorios y Manzanas</title>
-  
-  <!-- Leaflet & Leaflet Draw CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
-  <style>
-    :root {
-      --primary: #7c3aed;
-      --primary-hover: #6d28d9;
-      --primary-light: #ede9fe;
-      --primary-border: #c4b5fd;
-      --surface: #ffffff;
-      --bg: #f8fafc;
-      --text: #1e293b;
-      --text-muted: #64748b;
-      --border: #e2e8f0;
-      --danger: #ef4444;
-      --success: #10b981;
-    }
-
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-      color: var(--text);
-      background: var(--bg);
-    }
-
-    /* Sidebar */
-    #sidebar {
-      width: 380px;
-      min-width: 340px;
-      background: var(--surface);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      z-index: 1000;
-      box-shadow: 4px 0 15px rgba(0,0,0,0.03);
-    }
-
-    .sidebar-header {
-      padding: 18px 20px;
-      background: linear-gradient(135deg, #7c3aed, #581c87);
-      color: white;
-    }
-    .sidebar-header h1 {
-      margin: 0;
-      font-size: 1.15rem;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .sidebar-header p {
-      margin: 4px 0 0;
-      font-size: 0.8rem;
-      opacity: 0.9;
-    }
-
-    .sidebar-content {
-      padding: 16px;
-      overflow-y: auto;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-    }
-    .card h2 {
-      margin: 0 0 10px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: var(--primary);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 6px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-
-    input[type="text"], input[type="number"], select {
-      width: 100%;
-      padding: 9px 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 0.9rem;
-      transition: all 0.2s;
-      outline: none;
-    }
-    input[type="text"]:focus, input[type="number"]:focus, select:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px var(--primary-light);
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      width: 100%;
-      padding: 10px 14px;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.88rem;
-      transition: background 0.2s;
-    }
-    .btn:hover { background: var(--primary-hover); }
-    .btn-secondary {
-      background: #f1f5f9;
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-    .btn-secondary:hover { background: #e2e8f0; }
-    .btn-success { background: var(--success); }
-    .btn-success:hover { background: #059669; }
-    .btn-sm { padding: 6px 10px; font-size: 0.78rem; width: auto; }
-
-    .radio-group {
-      display: flex;
-      gap: 8px;
-      background: var(--bg);
-      padding: 4px;
-      border-radius: 8px;
-    }
-    .radio-pill {
-      flex: 1;
-      text-align: center;
-    }
-    .radio-pill input { display: none; }
-    .radio-pill label {
-      display: block;
-      margin: 0;
-      padding: 8px 6px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      transition: all 0.2s;
-    }
-    .radio-pill input:checked + label {
-      background: var(--primary);
-      color: white;
-    }
-
-    /* Blocks list */
-    #blocks-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      max-height: 220px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    #blocks-list li {
-      background: #f8fafc;
-      border: 1px solid var(--border);
-      padding: 8px 10px;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 0.85rem;
-    }
-    #blocks-list li:hover {
-      background: var(--primary-light);
-      border-color: var(--primary-border);
-    }
-    .block-actions {
-      display: flex;
-      gap: 4px;
-    }
-    .btn-icon {
-      background: none;
-      border: none;
-      padding: 4px 6px;
-      cursor: pointer;
-      border-radius: 4px;
-      font-size: 0.85rem;
-    }
-    .btn-icon:hover { background: rgba(0,0,0,0.06); }
-    .btn-icon.del:hover { background: #fee2e2; color: var(--danger); }
-
-    /* Map container */
-    #map-wrapper {
-      flex: 1;
-      height: 100%;
-      position: relative;
-    }
-    #map {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* Search bar floating on map */
-    .map-search-box {
-      position: absolute;
-      top: 15px;
-      left: 60px;
-      z-index: 1000;
-      display: flex;
-      gap: 6px;
-      background: white;
-      padding: 6px;
-      border-radius: 8px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-      width: 320px;
-    }
-    .map-search-box input {
-      border: 1px solid #cbd5e1;
-      border-radius: 4px;
-      padding: 6px 10px;
-      font-size: 0.85rem;
-      flex: 1;
-      outline: none;
-    }
-    .map-search-box button {
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 6px 12px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.8rem;
-    }
-
-    /* Manzana label styles on map */
-    .block-map-label {
-      background: rgba(124, 58, 237, 0.9) !important;
-      color: white !important;
-      border: 1px solid white !important;
-      border-radius: 12px !important;
-      font-weight: 700 !important;
-      font-size: 11px !important;
-      padding: 2px 7px !important;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2) !important;
-    }
-
-    /* Modal */
-    .modal-backdrop {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 2000;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal-backdrop.active { display: flex; }
-    .modal {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      width: 320px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-    }
-    .modal h3 { margin: 0 0 12px; font-size: 1.05rem; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor de territorios</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+:root{
+  --pri-900:#33214a; --pri-700:#543a7e; --pri-500:#8560a8; --pri-100:#efe8f7; --pri-claro:#bfa3dd; --acento:#dda15e;
+  --fondo:#f6f3fa; --tarjeta:#ffffff; --tinta:#251f2e; --tinta-suave:#6a6176; --linea:rgba(51,33,74,.15);
+  --peligro:#a33a4a; --boton:#543a7e; --pri-texto:#543a7e; --campo:#ffffff;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --fondo:#141118; --tarjeta:#1e1a24; --tinta:#ece8f2; --tinta-suave:#a79fb5; --linea:rgba(255,255,255,.14);
+         --pri-100:rgba(191,163,221,.14); --peligro:#e58a98; --boton:#8560a8; --pri-texto:#bfa3dd; --campo:#26212d; }
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--tinta);background:var(--fondo)}
+#app{display:grid;grid-template-columns:380px minmax(0,1fr);height:100%}
+#panel{overflow-y:auto;border-right:1px solid var(--linea);padding:16px 16px 56px;background:var(--fondo)}
+#mapwrap{position:relative;min-width:0}
+#map{position:absolute;inset:0}
+@media (max-width:820px){
+  #app{grid-template-columns:1fr;grid-template-rows:55% 45%}
+  #mapwrap{order:1} #panel{order:2;border-right:0;border-top:1px solid var(--linea)}
+}
+h1{font-size:19px;font-weight:650;margin:0;letter-spacing:-.01em}
+h2{font-size:13px;font-weight:650;margin:0 0 8px;color:var(--pri-texto)}
+.lead{margin:4px 0 12px;color:var(--tinta-suave)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+section{background:var(--tarjeta);border:1px solid var(--linea);border-radius:12px;padding:12px;margin:0 0 12px}
+details{margin:0 0 12px;color:var(--tinta-suave)}
+details summary{cursor:pointer;color:var(--pri-texto);font-weight:600}
+details ul{margin:6px 0 0;padding-left:18px}
+label.f{display:block;font-size:12px;color:var(--tinta-suave);margin:8px 0 3px}
+input[type=text],textarea{width:100%;font:inherit;color:var(--tinta);background:var(--campo);border:1px solid var(--linea);border-radius:8px;padding:7px 9px}
+textarea{resize:vertical;min-height:58px}
+input[type=text]:focus,textarea:focus{outline:2px solid var(--pri-500);outline-offset:0;border-color:transparent}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid2 label.f:first-child{margin-top:8px}
+button{font:inherit;cursor:pointer}
+.btn{background:var(--tarjeta);color:var(--tinta);border:1px solid var(--linea);border-radius:8px;padding:7px 11px;min-height:36px}
+.btn:hover{border-color:var(--pri-500)}
+.btn.pri{background:var(--boton);border-color:var(--boton);color:#fff}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--peligro)}
+.btn[disabled]{opacity:.4;cursor:default}
+button:focus-visible,summary:focus-visible,input[type=checkbox]:focus-visible{outline:2px solid var(--pri-500);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+ul.lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.item{width:100%;display:flex;align-items:center;gap:10px;text-align:left;background:var(--campo);border:1px solid var(--linea);border-radius:10px;padding:8px 10px}
+.item.on{border-color:var(--pri-500);background:var(--pri-100)}
+.item .dot{width:14px;height:14px;border-radius:50%;flex:none;border:2px solid rgba(255,255,255,.7);box-shadow:0 0 0 1px var(--linea)}
+.item .n{font-weight:600}
+.item .s{display:block;font-size:12px;color:var(--tinta-suave)}
+.meta{margin:8px 0 0;font-size:12px;color:var(--tinta-suave)}
+.calle{display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:6px;margin-bottom:6px}
+.calle button{padding:0 9px}
+.tol{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tinta-suave)}
+.tol input{width:58px}
+.inline{display:flex;align-items:center;gap:8px}
+input[type=color]{width:38px;height:30px;padding:0;border:1px solid var(--linea);border-radius:6px;background:var(--campo)}
+/* mapa */
+.ctrl{position:absolute;top:10px;left:10px;z-index:5;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.seg{display:inline-flex;background:var(--tarjeta);border:1px solid var(--linea);border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.seg button{border:0;background:transparent;color:var(--tinta);padding:8px 14px;min-height:38px}
+.seg button.on{background:var(--boton);color:#fff}
+.chk{display:flex;align-items:center;gap:8px;background:var(--tarjeta);border:1px solid var(--linea);border-radius:10px;padding:7px 11px;box-shadow:0 2px 8px rgba(0,0,0,.18);cursor:pointer;user-select:none}
+.chk input{accent-color:var(--boton);width:16px;height:16px;margin:0}
+#hint{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:5;max-width:min(560px,calc(100% - 140px));background:rgba(37,31,46,.88);color:#fff;padding:8px 14px;border-radius:10px;text-align:center;font-size:13px;pointer-events:none}
+#toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:9;background:var(--pri-900);color:#fff;padding:9px 16px;border-radius:10px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .2s;max-width:80%}
+#toast.on{opacity:1}
+.vtx{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--pri-700);box-shadow:0 1px 4px rgba(0,0,0,.5);cursor:grab;z-index:3}
+.vtx:hover{background:var(--acento)}
+.mid{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.92);border:2px solid var(--pri-500);opacity:.9;cursor:copy;z-index:2}
+.mid:hover{background:var(--acento);opacity:1}
+.draw-cursor .maplibregl-canvas{cursor:crosshair}
+dialog{border:1px solid var(--linea);border-radius:14px;background:var(--tarjeta);color:var(--tinta);padding:18px;max-width:420px}
+dialog::backdrop{background:rgba(20,17,24,.55)}
+dialog h3{margin:0 0 6px;font-size:16px}
+dialog p{margin:0 0 4px;color:var(--tinta-suave)}
+.maplibregl-ctrl-attrib{font-size:11px}
+</style>
 </head>
 <body>
-
-  <!-- Sidebar -->
-  <aside id="sidebar">
-    <div class="sidebar-header">
-      <h1>🗺️ Editor de Territorios</h1>
-      <p>Dibuja, importa y edita manzanas con alto zoom</p>
-    </div>
-
-    <div class="sidebar-content">
-      <!-- 1. Cargar o crear -->
-      <div class="card">
-        <h2>📁 1. Archivo o Territorio</h2>
-        <label>Número de Territorio:</label>
-        <input type="text" id="territory-num" placeholder="Ej: 10" value="10">
-        
-        <label style="margin-top: 10px;">Cargar archivo .json existente:</label>
-        <input type="file" id="file-input" accept=".json" style="font-size: 0.8rem;">
-        <p style="font-size: 0.72rem; color: var(--text-muted); margin: 4px 0 0;">
-          💡 Puedes subir un archivo <code>territorio_X.json</code> existente para modificarlo y corregirlo.
-        </p>
-      </div>
-
-      <!-- 2. Modo de dibujo -->
-      <div class="card">
-        <h2>✏️ 2. Modo de Dibujo</h2>
-        <div class="radio-group">
-          <div class="radio-pill">
-            <input type="radio" id="mode-block" name="drawMode" value="block" checked>
-            <label for="mode-block">🏢 Manzanas</label>
-          </div>
-          <div class="radio-pill">
-            <input type="radio" id="mode-territory" name="drawMode" value="territory">
-            <label for="mode-territory">📐 Límite Exterior</label>
-          </div>
-        </div>
-        <p style="font-size: 0.75rem; color: var(--text-muted); margin: 8px 0 0;">
-          Usa la herramienta de <strong>Pentágono</strong> arriba a la izquierda del mapa para empezar a trazar.
-        </p>
-      </div>
-
-      <!-- 3. Lista de Manzanas -->
-      <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-          <h2 style="margin: 0;">📋 Manzanas (<span id="blocks-count">0</span>)</h2>
-          <button class="btn-sm btn-secondary" onclick="clearAllBlocks()">Limpiar</button>
-        </div>
-        <ul id="blocks-list">
-          <li style="color: var(--text-muted); justify-content: center; font-style: italic;">Sin manzanas dibujadas</li>
-        </ul>
-      </div>
-
-      <!-- 4. Exportar -->
-      <div class="card">
-        <h2>💾 3. Guardar Cambios</h2>
-        <button class="btn btn-success" id="export-btn">📥 Descargar territorio.json</button>
+<div id="app">
+  <aside id="panel">
+    <div class="top">
+      <h1>Editor de territorios</h1>
+      <div class="inline">
+        <button class="btn" id="btnUndo" title="Deshacer (Ctrl+Z)">Deshacer</button>
+        <button class="btn" id="btnRedo" title="Rehacer (Ctrl+Y)">Rehacer</button>
       </div>
     </div>
+    <p class="lead">Ajusta el contorno de cada zona y descarga el JSON para la app.</p>
+
+    <details>
+      <summary>Cómo se usa</summary>
+      <ul>
+        <li>Arrastra un círculo blanco para mover un vértice.</li>
+        <li>Toca un punto pequeño entre dos vértices para añadir uno nuevo.</li>
+        <li>Doble clic o clic derecho en un vértice lo borra.</li>
+        <li>Activa «Vista previa de la app» para ver cómo se verá sin las herramientas.</li>
+        <li>Los cambios se guardan solos en este navegador.</li>
+      </ul>
+    </details>
+
+    <section>
+      <h2>Territorios</h2>
+      <ul class="lista" id="listT"></ul>
+      <div class="row">
+        <button class="btn pri" id="btnNewT">Nuevo territorio</button>
+        <button class="btn danger" id="btnDelT">Eliminar</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Datos del territorio</h2>
+      <label class="f" for="f_nombre" style="margin-top:0">Nombre</label>
+      <input type="text" id="f_nombre" autocomplete="off">
+      <div class="grid2">
+        <div><label class="f" for="f_numero">Número (opcional)</label><input type="text" id="f_numero" autocomplete="off"></div>
+        <div><label class="f" for="f_localidad">Localidad</label><input type="text" id="f_localidad" autocomplete="off"></div>
+      </div>
+      <label class="f" for="f_descripcion">Descripción (de dónde a dónde va)</label>
+      <textarea id="f_descripcion"></textarea>
+      <label class="f" style="margin-top:12px">Límites</label>
+      <div class="grid2">
+        <div><label class="f" for="f_norte" style="margin-top:0">Norte</label><input type="text" id="f_norte" autocomplete="off"></div>
+        <div><label class="f" for="f_sur" style="margin-top:0">Sur</label><input type="text" id="f_sur" autocomplete="off"></div>
+        <div><label class="f" for="f_oriente">Oriente</label><input type="text" id="f_oriente" autocomplete="off"></div>
+        <div><label class="f" for="f_occidente">Occidente</label><input type="text" id="f_occidente" autocomplete="off"></div>
+      </div>
+      <label class="f" style="margin-top:12px">Calles principales</label>
+      <div id="calles"></div>
+      <div class="row" style="margin-top:4px">
+        <button class="btn" id="btnAddCalle">Añadir calle</button>
+        <button class="btn" id="btnDetect" title="Busca en el mapa las calles que bordean el contorno">Detectar calles del borde</button>
+      </div>
+      <div class="tol" style="margin-top:8px">Distancia al borde <input type="text" id="tol" value="30" inputmode="numeric"> m · experimental, revisa el resultado</div>
+      <label class="f" style="margin-top:12px">Color en el mapa</label>
+      <div class="inline">
+        <input type="color" id="f_color" value="#7c3aed" aria-label="Color del territorio">
+        <label class="inline" style="font-size:13px"><input type="checkbox" id="f_colorAuto"> Automático</label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Contorno</h2>
+      <ul class="lista" id="listR"></ul>
+      <div class="row">
+        <button class="btn pri" id="btnDraw">Dibujar polígono</button>
+        <button class="btn" id="btnCancelDraw" hidden>Cancelar</button>
+        <button class="btn danger" id="btnDelR">Quitar polígono</button>
+        <button class="btn" id="btnFit">Centrar</button>
+      </div>
+      <p class="meta" id="statsT"></p>
+    </section>
+
+    <section>
+      <h2>Archivo</h2>
+      <div class="row" style="margin-top:0">
+        <button class="btn pri" id="btnDownload">Descargar JSON (v3)</button>
+        <button class="btn" id="btnCopy">Copiar JSON</button>
+        <button class="btn" id="btnGeo">Descargar GeoJSON</button>
+      </div>
+      <div class="row">
+        <button class="btn" id="btnImport">Importar archivo…</button>
+        <button class="btn danger" id="btnReset">Volver al borrador</button>
+      </div>
+      <input type="file" id="file" accept=".json,.geojson,application/json" hidden>
+      <p class="meta">Acepta el JSON v3, GeoJSON (por ejemplo de geojson.io) y el formato del editor anterior. También puedes soltar el archivo sobre el mapa.</p>
+    </section>
   </aside>
 
-  <!-- Map Area -->
-  <main id="map-wrapper">
-    <!-- Search box -->
-    <div class="map-search-box">
-      <input type="text" id="search-input" placeholder="Buscar dirección o barrio (ej: Suba)..." onkeydown="if(event.key==='Enter') searchAddress()">
-      <button onclick="searchAddress()">🔍</button>
-    </div>
-
+  <main id="mapwrap">
     <div id="map"></div>
-  </main>
-
-  <!-- Modal para asignar número de manzana -->
-  <div class="modal-backdrop" id="block-modal">
-    <div class="modal">
-      <h3>🏢 Nueva Manzana</h3>
-      <label>Número de Manzana:</label>
-      <input type="text" id="modal-block-num" placeholder="Ej: 1" autofocus>
-      <div style="display: flex; gap: 8px; margin-top: 15px;">
-        <button class="btn btn-secondary" onclick="cancelBlockModal()">Cancelar</button>
-        <button class="btn" onclick="confirmBlockModal()">Guardar</button>
+    <div class="ctrl">
+      <div class="seg" role="group" aria-label="Mapa base">
+        <button data-base="calles" class="on">Calles</button>
+        <button data-base="sat">Satélite</button>
       </div>
+      <label class="chk"><input type="checkbox" id="chkRef"> Tarjetas originales</label>
+      <label class="chk"><input type="checkbox" id="chkPrev"> Vista previa de la app</label>
     </div>
+    <div id="hint"></div>
+    <div id="toast" role="status"></div>
+  </main>
+</div>
+
+<dialog id="dlg">
+  <h3 id="dlgTitle">Importar</h3>
+  <p id="dlgText"></p>
+  <div class="row">
+    <button class="btn pri" id="dlgMerge">Combinar</button>
+    <button class="btn danger" id="dlgReplace">Reemplazar todo</button>
+    <button class="btn" id="dlgCancel">Cancelar</button>
   </div>
+</dialog>
 
-  <!-- Leaflet & Leaflet Draw Scripts -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+(function(){
+'use strict';
 
-  <script>
-    // 1. Capas de mapa con Alto Zoom (Zoom 22 con overzoom)
-    const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-      subdomains: 'abcd',
-      maxNativeZoom: 20,
-      maxZoom: 22
+/* ======== Datos incrustados ======== */
+const DEFAULT_BUNDLE = {"version":3,"actualizado":"2026-10-29","grupos":[],"territorios":[{"id":"las-flores","nombre":"Las Flores","numero":null,"localidad":"","descripcion":"","limites_texto":{"norte":"","sur":"","oriente":"","occidente":""},"calles":[],"color":null,"poligonos":[[[4.747502,-74.105809],[4.749277,-74.105594],[4.749216,-74.104862],[4.749705,-74.104838],[4.750266,-74.103733],[4.749689,-74.102472],[4.749669,-74.102484],[4.749138,-74.101499],[4.749218,-74.101464],[4.748727,-74.100369],[4.747514,-74.097866],[4.747556,-74.097848],[4.747208,-74.097376],[4.746438,-74.096523],[4.745797,-74.096797],[4.745818,-74.097041],[4.743568,-74.098111],[4.741822,-74.099032],[4.741648,-74.098556],[4.740285,-74.099071],[4.740924,-74.100613],[4.741173,-74.101308],[4.740868,-74.101442],[4.741094,-74.101947],[4.741703,-74.103553],[4.741606,-74.103593],[4.741718,-74.103888],[4.742386,-74.103631],[4.74251,-74.104026],[4.741825,-74.104248],[4.74206,-74.104875],[4.74286,-74.104978],[4.742873,-74.105015],[4.744427,-74.105225],[4.744541,-74.105557],[4.745524,-74.105664],[4.745773,-74.105517],[4.746539,-74.1056],[4.746545,-74.10568],[4.747499,-74.105762]],[[4.74623,-74.10656],[4.744888,-74.106506],[4.745498,-74.108062],[4.746519,-74.107305]]],"puntos_interes":[]}]};
+const TARJETAS_RAW = [{"n":"1","ring":[[4.745925,-74.09825],[4.746732,-74.098197],[4.747556,-74.097848],[4.747208,-74.097376],[4.746438,-74.096523],[4.745797,-74.096797]]},{"n":"2","ring":[[4.747529,-74.097896],[4.746765,-74.098218],[4.747353,-74.099484],[4.748133,-74.099125]]},{"n":"3","ring":[[4.747967,-74.100664],[4.748694,-74.100316],[4.748149,-74.099151],[4.74739,-74.099479]]},{"n":"4","ring":[[4.747983,-74.100723],[4.748727,-74.100369],[4.749218,-74.101464],[4.749037,-74.101544],[4.748999,-74.101458],[4.748486,-74.101791]]},{"n":"5","ring":[[4.747593,-74.1009],[4.747967,-74.100734],[4.748443,-74.101828],[4.748956,-74.101517],[4.748978,-74.101592],[4.747855,-74.102349],[4.747727,-74.102145]]},{"n":"6","ring":[[4.745931,-74.098309],[4.746652,-74.098245],[4.746738,-74.099318],[4.746032,-74.099388]]},{"n":"7","ring":[[4.746198,-74.100991],[4.747165,-74.100895],[4.747043,-74.09957],[4.746054,-74.099688]]},{"n":"8","ring":[[4.746845,-74.100997],[4.746209,-74.10105],[4.746305,-74.102102],[4.746946,-74.102054]]},{"n":"9","ring":[[4.747534,-74.100932],[4.747636,-74.102016],[4.746989,-74.102059],[4.746877,-74.100981]]},{"n":"10","ring":[[4.747802,-74.102424],[4.74762,-74.102011],[4.746305,-74.102129],[4.746337,-74.102654],[4.746198,-74.10273],[4.746273,-74.103518]]},{"n":"11","ring":[[4.748331,-74.103132],[4.747844,-74.102392],[4.749197,-74.101608],[4.749582,-74.102322]]},{"n":"12","ring":[[4.750266,-74.103733],[4.749689,-74.102472],[4.748855,-74.10296],[4.749149,-74.103545],[4.749266,-74.104859],[4.749705,-74.104838]]},{"n":"13","ring":[[4.747502,-74.105809],[4.747369,-74.104071],[4.749138,-74.103942],[4.749277,-74.105594]]},{"n":"14","ring":[[4.747283,-74.104275],[4.746433,-74.104339],[4.746545,-74.10568],[4.747417,-74.105755]]},{"n":"15","ring":[[4.747738,-74.103534],[4.747363,-74.103819],[4.747342,-74.104119],[4.746428,-74.104183],[4.746374,-74.103352],[4.747304,-74.10274]]},{"n":"16","ring":[[4.74515,-74.098299],[4.745856,-74.098245],[4.745743,-74.097075],[4.745064,-74.097387]]},{"n":"17","ring":[[4.745872,-74.098309],[4.745936,-74.099092],[4.745246,-74.099178],[4.745171,-74.098363]]},{"n":"18","ring":[[4.746054,-74.100074],[4.746128,-74.101002],[4.745412,-74.101319],[4.745332,-74.100112]]},{"n":"19","ring":[[4.744872,-74.101624],[4.746144,-74.101072],[4.746214,-74.101887],[4.745145,-74.102408]]},{"n":"20","ring":[[4.746299,-74.102633],[4.746209,-74.101903],[4.745155,-74.102461],[4.74538,-74.103057]]},{"n":"21","ring":[[4.745193,-74.099205],[4.745011,-74.097424],[4.743589,-74.098111],[4.744161,-74.099672],[4.744995,-74.099243]]},{"n":"22","ring":[[4.744819,-74.101576],[4.744166,-74.099715],[4.744963,-74.099291],[4.745171,-74.099253],[4.745294,-74.100144],[4.745417,-74.10134]]},{"n":"23","ring":[[4.742808,-74.101276],[4.744423,-74.100487],[4.743568,-74.098111],[4.742001,-74.098937]]},{"n":"24","ring":[[4.7433,-74.102976],[4.742841,-74.101303],[4.744418,-74.100525],[4.744963,-74.10207],[4.744444,-74.102359],[4.744476,-74.102483]]},{"n":"25","ring":[[4.743648,-74.103915],[4.745348,-74.103068],[4.745011,-74.102123],[4.744492,-74.102365],[4.744557,-74.102536],[4.743311,-74.103041]]},{"n":"26","ring":[[4.746294,-74.104403],[4.746187,-74.102783],[4.745904,-74.102837],[4.745086,-74.103228],[4.745166,-74.104044],[4.745294,-74.104285],[4.746011,-74.104382]]},{"n":"27","ring":[[4.746385,-74.105583],[4.74631,-74.104457],[4.745706,-74.104382],[4.745653,-74.104924],[4.745776,-74.105058],[4.745743,-74.105514]]},{"n":"28","ring":[[4.744027,-74.104789],[4.743685,-74.103931],[4.744909,-74.103373],[4.74523,-74.104301]]},{"n":"29","ring":[[4.744268,-74.104757],[4.744541,-74.105557],[4.745524,-74.105664],[4.745733,-74.105541],[4.745278,-74.104334]]},{"n":"30","ring":[[4.746519,-74.107305],[4.74623,-74.10656],[4.744888,-74.106506],[4.745498,-74.108062]]},{"n":"31","ring":[[4.742199,-74.100069],[4.741648,-74.098556],[4.740285,-74.099071],[4.740895,-74.100541]]},{"n":"32","ring":[[4.74221,-74.100106],[4.740916,-74.100589],[4.741173,-74.101308],[4.740868,-74.101442],[4.741108,-74.101979],[4.741274,-74.10192],[4.74121,-74.10171],[4.742584,-74.101152]]},{"n":"33","ring":[[4.741402,-74.102751],[4.742974,-74.102193],[4.742616,-74.101163],[4.741189,-74.101716],[4.741274,-74.101914],[4.741108,-74.101984]]},{"n":"34","ring":[[4.743188,-74.102928],[4.742963,-74.102204],[4.741584,-74.102751],[4.741499,-74.102735],[4.741397,-74.102783],[4.74168,-74.103497]]},{"n":"35","ring":[[4.743306,-74.103266],[4.743193,-74.102944],[4.741606,-74.103593],[4.741718,-74.103888],[4.742386,-74.103631],[4.742477,-74.10392],[4.743049,-74.103695],[4.742969,-74.103405]]},{"n":"36","ring":[[4.744102,-74.105181],[4.743332,-74.103314],[4.743017,-74.103432],[4.743113,-74.103733],[4.742509,-74.103958],[4.742873,-74.105015]]},{"n":"37","ring":[[4.742851,-74.104977],[4.74252,-74.104022],[4.741825,-74.104248],[4.74206,-74.104875]]}];
+
+const LIBERTY_URL = 'https://tiles.openfreemap.org/styles/liberty';
+const ESRI_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const STORE_KEY = 'editor_territorios_v1';
+const PALETTE = ['#7c3aed','#0ea5e9','#f97316','#16a34a','#e11d48','#ca8a04','#0d9488','#c026d3','#2563eb','#65a30d'];
+
+// <PURE>
+const MLAT = 110574;
+function mLng(lat){ return 111320*Math.cos(lat*Math.PI/180); }
+function closeRing(r){ return r.concat([r[0]]); }
+function ringArea(r){
+  if(r.length<3) return 0;
+  const lat0=r.reduce((s,p)=>s+p[1],0)/r.length, kx=mLng(lat0), o=r[0];
+  let a=0;
+  for(let i=0;i<r.length;i++){
+    const p=r[i], q=r[(i+1)%r.length];
+    const px=(p[0]-o[0])*kx, py=(p[1]-o[1])*MLAT, qx=(q[0]-o[0])*kx, qy=(q[1]-o[1])*MLAT;
+    a+=px*qy-qx*py;
+  }
+  return Math.abs(a)/2;
+}
+function pointInRing(pt,r){
+  let inside=false;
+  for(let i=0,j=r.length-1;i<r.length;j=i++){
+    const xi=r[i][0], yi=r[i][1], xj=r[j][0], yj=r[j][1];
+    if(((yi>pt[1])!==(yj>pt[1])) && (pt[0] < (xj-xi)*(pt[1]-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+function distPtSeg(px,py,ax,ay,bx,by){
+  const dx=bx-ax, dy=by-ay, l2=dx*dx+dy*dy;
+  let t=l2?((px-ax)*dx+(py-ay)*dy)/l2:0; t=Math.max(0,Math.min(1,t));
+  return Math.hypot(px-(ax+t*dx), py-(ay+t*dy));
+}
+function distToRing(pt,r){ // metros
+  const kx=mLng(pt[1]), px=pt[0]*kx, py=pt[1]*MLAT;
+  let best=Infinity;
+  for(let i=0;i<r.length;i++){
+    const a=r[i], b=r[(i+1)%r.length];
+    const d=distPtSeg(px,py,a[0]*kx,a[1]*MLAT,b[0]*kx,b[1]*MLAT);
+    if(d<best) best=d;
+  }
+  return best;
+}
+function ringBBox(r){
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  for(const p of r){ if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0]; if(p[1]<y0)y0=p[1]; if(p[1]>y1)y1=p[1]; }
+  return [x0,y0,x1,y1];
+}
+function labelPoint(r){
+  const [x0,y0,x1,y1]=ringBBox(r), N=28;
+  let best=null, bd=-1;
+  function scan(a0,a1,b0,b1){
+    for(let i=0;i<=N;i++) for(let j=0;j<=N;j++){
+      const p=[a0+(a1-a0)*i/N, b0+(b1-b0)*j/N];
+      if(!pointInRing(p,r)) continue;
+      const d=distToRing(p,r);
+      if(d>bd){ bd=d; best=p; }
+    }
+  }
+  scan(x0,x1,y0,y1);
+  if(!best) return [(x0+x1)/2,(y0+y1)/2];
+  const dx=(x1-x0)/N, dy=(y1-y0)/N;
+  scan(best[0]-dx,best[0]+dx,best[1]-dy,best[1]+dy);
+  return best;
+}
+function slug(s){
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
+function uniqueId(base,taken){
+  let id=base||'territorio', n=2;
+  while(taken.has(id)){ id=(base||'territorio')+'-'+n++; }
+  taken.add(id); return id;
+}
+function openRing(r){
+  if(r.length>1){ const a=r[0], b=r[r.length-1]; if(a[0]===b[0]&&a[1]===b[1]) return r.slice(0,-1); }
+  return r;
+}
+function textOf(v){ return v==null?'':String(v); }
+function parseMaybe(v){
+  if(typeof v==='string'){ const s=v.trim(); if(s[0]==='['||s[0]==='{'){ try{ return JSON.parse(s); }catch(e){} } }
+  return v;
+}
+function normCalles(c){
+  c=parseMaybe(c);
+  if(typeof c==='string') c=c.split(/[;\n]/).map(s=>s.trim()).filter(Boolean);
+  if(!Array.isArray(c)) return [];
+  return c.map(x=> typeof x==='string' ? {nombre:x,desde:'',hasta:''} : {nombre:textOf(x&&x.nombre),desde:textOf(x&&x.desde),hasta:textOf(x&&x.hasta)}).filter(x=>x.nombre||x.desde||x.hasta);
+}
+function normLimites(l){
+  l=parseMaybe(l); l=(l&&typeof l==='object')?l:{};
+  return {norte:textOf(l.norte),sur:textOf(l.sur),oriente:textOf(l.oriente),occidente:textOf(l.occidente)};
+}
+function normTerr(t){
+  return {
+    id: textOf(t.id), nombre: textOf(t.nombre), numero: textOf(t.numero), localidad: textOf(t.localidad),
+    descripcion: textOf(t.descripcion), limites_texto: normLimites(t.limites_texto), calles: normCalles(t.calles),
+    color: (typeof t.color==='string' && /^#[0-9a-f]{6}$/i.test(t.color)) ? t.color : null,
+    poligonos: (t.poligonos||[]).map(openRing).filter(r=>r.length>=3),
+    puntos_interes: Array.isArray(t.puntos_interes)?t.puntos_interes:[]
+  };
+}
+function fromV3(t){
+  let rings=[];
+  if(Array.isArray(t.poligonos)) rings=t.poligonos;
+  else if(Array.isArray(t.limites) && t.limites.length) rings = Array.isArray(t.limites[0][0]) ? t.limites : [t.limites];
+  rings=rings.filter(r=>Array.isArray(r)&&r.length>=3).map(r=>r.map(p=>[+p[1],+p[0]])); // [lat,lng] -> [lng,lat]
+  const legacyNum = t.numero_territorio!=null ? t.numero_territorio : '';
+  return normTerr({
+    id: t.id!=null ? t.id : (t.territorio_id!=null ? t.territorio_id : ''),
+    nombre: t.nombre || (legacyNum!=='' ? 'Territorio '+legacyNum : ''),
+    numero: t.numero!=null ? t.numero : legacyNum,
+    localidad:t.localidad, descripcion:t.descripcion, limites_texto:t.limites_texto, calles:t.calles,
+    color:t.color, poligonos:rings, puntos_interes:t.puntos_interes
+  });
+}
+function fromFeature(f){
+  const g=f&&f.geometry, p=(f&&f.properties)||{};
+  let rings=[];
+  if(g&&g.type==='Polygon') rings=[g.coordinates[0]];
+  else if(g&&g.type==='MultiPolygon') rings=g.coordinates.map(x=>x[0]);
+  rings=rings.map(r=>r.map(q=>[+q[0],+q[1]]));   // GeoJSON ya es [lng,lat]
+  return normTerr({
+    id:p.id, nombre:p.nombre||p.name, numero:p.numero, localidad:p.localidad, descripcion:p.descripcion,
+    limites_texto: p.limites_texto || {norte:p.norte,sur:p.sur,oriente:p.oriente,occidente:p.occidente},
+    calles:p.calles, color:p.color, poligonos:rings, puntos_interes:p.puntos_interes
+  });
+}
+function parseInput(obj){
+  const out={territorios:[],grupos:null};
+  if(obj && obj.type==='FeatureCollection' && Array.isArray(obj.features)) out.territorios=obj.features.map(fromFeature);
+  else if(obj && obj.type==='Feature') out.territorios=[fromFeature(obj)];
+  else if(obj && Array.isArray(obj.territorios)){ out.territorios=obj.territorios.map(fromV3); if(Array.isArray(obj.grupos)) out.grupos=obj.grupos; }
+  else if(Array.isArray(obj)) out.territorios=obj.map(fromV3);
+  else if(obj && (obj.limites||obj.poligonos)) out.territorios=[fromV3(obj)];
+  else throw new Error('No reconozco el formato del archivo.');
+  out.territorios=out.territorios.filter(t=>t.poligonos.length>0 || t.nombre);
+  const taken=new Set();
+  out.territorios.forEach((t,i)=>{
+    if(!t.nombre) t.nombre='Territorio '+(i+1);
+    t.id=uniqueId(slug(t.id)||slug(t.nombre)||('territorio-'+(i+1)),taken);
+  });
+  if(!out.territorios.length) throw new Error('El archivo no trae territorios con contorno.');
+  return out;
+}
+function round6(n){ return Math.round(n*1e6)/1e6; }
+function numOut(v){ v=String(v==null?'':v).trim(); if(v==='') return null; return /^\d+$/.test(v)?+v:v; }
+function toBundle(territorios,grupos,fecha){
+  return {
+    version:3, actualizado:fecha, grupos:grupos||[],
+    territorios: territorios.map(t=>({
+      id:t.id, nombre:t.nombre, numero:numOut(t.numero), localidad:t.localidad, descripcion:t.descripcion,
+      limites_texto:{norte:t.limites_texto.norte,sur:t.limites_texto.sur,oriente:t.limites_texto.oriente,occidente:t.limites_texto.occidente},
+      calles:t.calles.filter(c=>c.nombre.trim()).map(c=>({nombre:c.nombre,desde:c.desde,hasta:c.hasta})),
+      color:t.color||null,
+      poligonos:t.poligonos.map(r=>r.map(p=>[round6(p[1]),round6(p[0])])),
+      puntos_interes:t.puntos_interes||[]
+    }))
+  };
+}
+function toGeoJSON(territorios){
+  return {type:'FeatureCollection', features: territorios.filter(t=>t.poligonos.length).map(t=>({
+    type:'Feature',
+    properties:{id:t.id,nombre:t.nombre,numero:numOut(t.numero),localidad:t.localidad,descripcion:t.descripcion,
+      limites_texto:t.limites_texto,calles:t.calles.filter(c=>c.nombre.trim()),color:t.color||null},
+    geometry:{type:'MultiPolygon',coordinates:t.poligonos.map(r=>[closeRing(r).map(p=>[round6(p[0]),round6(p[1])])])}
+  }))};
+}
+// </PURE>
+
+/* ======== Estado ======== */
+const $ = s=>document.querySelector(s);
+let state, hist=[], hi=-1;
+let selRing=0, mode='idle', draft=[], cursorPt=null, preview=false, showRef=false, base='calles';
+let map, liberty, hybrid, fontBold=['Noto Sans Bold'], fontReg=['Noto Sans Regular'];
+let vMarkers=[], mMarkers=[];
+const TARJETAS = TARJETAS_RAW.map(t=>({n:t.n, ring:t.ring.map(p=>[p[1],p[0]])}));
+
+function today(){ const d=new Date(), z=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()); }
+function freshState(){ const p=parseInput(DEFAULT_BUNDLE); return {territorios:p.territorios, grupos:p.grupos||[], sel:0}; }
+function loadState(){
+  try{
+    const s=localStorage.getItem(STORE_KEY);
+    if(s){ const o=JSON.parse(s); if(o && Array.isArray(o.territorios) && o.territorios.length) return {territorios:o.territorios,grupos:o.grupos||[],sel:Math.min(o.sel||0,o.territorios.length-1)}; }
+  }catch(e){}
+  return freshState();
+}
+function persist(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify({territorios:state.territorios,grupos:state.grupos,sel:state.sel})); }catch(e){} }
+function snap(){ return JSON.stringify({territorios:state.territorios,grupos:state.grupos,sel:state.sel}); }
+function commit(){
+  const s=snap();
+  if(hi>=0 && hist[hi]===s) return;
+  hist=hist.slice(0,hi+1); hist.push(s);
+  if(hist.length>150) hist.shift();
+  hi=hist.length-1; persist(); updateUndoBtns();
+}
+function restore(s){
+  const o=JSON.parse(s);
+  state.territorios=o.territorios; state.grupos=o.grupos; state.sel=Math.min(o.sel,o.territorios.length-1); selRing=0;
+  refreshAll(true);
+}
+function undo(){ if(hi>0){ hi--; restore(hist[hi]); persist(); updateUndoBtns(); } }
+function redo(){ if(hi<hist.length-1){ hi++; restore(hist[hi]); persist(); updateUndoBtns(); } }
+function updateUndoBtns(){ $('#btnUndo').disabled = hi<=0; $('#btnRedo').disabled = hi>=hist.length-1; }
+const cur = ()=>state.territorios[state.sel];
+const colorOf = (t,i)=>t.color||PALETTE[i%PALETTE.length];
+const km2 = m2=>(m2/1e6).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+let toastT;
+function toast(msg){ const el=$('#toast'); el.textContent=msg; el.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('on'),3800); }
+
+/* ======== Datos para el mapa ======== */
+function fcTerr(){
+  return {type:'FeatureCollection', features: state.territorios.map((t,i)=>({
+    type:'Feature',
+    properties:{i, nombre:t.nombre||'Sin nombre', color:colorOf(t,i), sel:(!preview && i===state.sel)?1:0},
+    geometry:{type:'MultiPolygon', coordinates:t.poligonos.filter(r=>r.length>=3).map(r=>[closeRing(r)])}
+  })).filter(f=>f.geometry.coordinates.length)};
+}
+function fcLbl(){
+  const features=[];
+  state.territorios.forEach((t,i)=>{
+    const rings=t.poligonos.filter(r=>r.length>=3);
+    if(!rings.length) return;
+    let big=rings[0], ba=ringArea(big);
+    for(const r of rings){ const a=ringArea(r); if(a>ba){ big=r; ba=a; } }
+    features.push({type:'Feature',properties:{nombre:t.nombre||'Sin nombre'},geometry:{type:'Point',coordinates:labelPoint(big)}});
+  });
+  return {type:'FeatureCollection',features};
+}
+let refCache=null;
+function fcRef(){
+  if(!refCache) refCache={
+    poly:{type:'FeatureCollection',features:TARJETAS.map(t=>({type:'Feature',properties:{n:t.n},geometry:{type:'Polygon',coordinates:[closeRing(t.ring)]}}))},
+    lbl:{type:'FeatureCollection',features:TARJETAS.map(t=>({type:'Feature',properties:{n:t.n},geometry:{type:'Point',coordinates:labelPoint(t.ring)}}))}
+  };
+  return refCache;
+}
+function fcDraft(){
+  const pts=draft.slice(); if(cursorPt && pts.length) pts.push(cursorPt);
+  const features=[];
+  if(pts.length>=2) features.push({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:pts}});
+  draft.forEach(p=>features.push({type:'Feature',properties:{},geometry:{type:'Point',coordinates:p}}));
+  return {type:'FeatureCollection',features};
+}
+function setSrc(id,data){ const s=map&&map.getSource(id); if(s) s.setData(data); }
+function updateSources(){
+  if(!map) return;
+  setSrc('terr',fcTerr()); setSrc('lbl',fcLbl()); setSrc('draft',fcDraft());
+}
+
+/* ======== Capas ======== */
+function addLayers(){
+  const empty={type:'FeatureCollection',features:[]};
+  const R=fcRef();
+  const src={ terr:fcTerr(), lbl:fcLbl(), ref:R.poly, refLbl:R.lbl, draft:fcDraft() };
+  for(const k in src) if(!map.getSource(k)) map.addSource(k,{type:'geojson',data:src[k]||empty});
+  const firstSym=(map.getStyle().layers.find(l=>l.type==='symbol')||{}).id;  // el relleno queda debajo de los nombres de calles
+  const isSel=['==',['get','sel'],1];
+  const add=(l,before)=>{ if(!map.getLayer(l.id)) map.addLayer(l,before); };
+  add({id:'terr-fill',type:'fill',source:'terr',paint:{
+    'fill-color':['get','color'],
+    'fill-opacity':['interpolate',['linear'],['zoom'],13,['case',isSel,0.30,0.22],17,['case',isSel,0.13,0.08],20,['case',isSel,0.07,0.05]]
+  }},firstSym);
+  add({id:'ref-line',type:'line',source:'ref',layout:{visibility:showRef&&!preview?'visible':'none'},paint:{'line-color':'#555','line-width':1.2,'line-dasharray':[2,2]}},firstSym);
+  add({id:'terr-line',type:'line',source:'terr',layout:{'line-join':'round'},paint:{
+    'line-color':['get','color'],
+    'line-width':['interpolate',['linear'],['zoom'],12,['case',isSel,3,2.2],20,['case',isSel,5,3.5]]
+  }},firstSym);
+  add({id:'ref-lbl',type:'symbol',source:'refLbl',layout:{visibility:showRef&&!preview?'visible':'none','text-field':['get','n'],'text-font':fontReg,'text-size':12,'text-allow-overlap':true},
+       paint:{'text-color':'#444','text-halo-color':'rgba(255,255,255,.9)','text-halo-width':1.5}});
+  add({id:'terr-lbl',type:'symbol',source:'lbl',layout:{
+    'text-field':['get','nombre'],'text-font':fontBold,
+    'text-size':['interpolate',['linear'],['zoom'],12,13,15,20,18,28,21,34],
+    'text-allow-overlap':true,'text-ignore-placement':true,'text-max-width':8
+  },paint:{'text-color':'#251f2e','text-halo-color':'rgba(255,255,255,.95)','text-halo-width':2.2,
+    'text-opacity':['interpolate',['linear'],['zoom'],16,1,18,0.4]}});
+  add({id:'draft-line',type:'line',source:'draft',filter:['==',['geometry-type'],'LineString'],paint:{'line-color':'#dda15e','line-width':3,'line-dasharray':[1.5,1.5]}});
+  add({id:'draft-pts',type:'circle',source:'draft',filter:['==',['geometry-type'],'Point'],paint:{'circle-radius':6,'circle-color':'#fff','circle-stroke-color':'#543a7e','circle-stroke-width':3}});
+}
+function pickFonts(style){
+  let bold=null, reg=null;
+  for(const l of (style.layers||[])){
+    const f=l.layout && l.layout['text-font'];
+    if(Array.isArray(f) && f.length && f.every(x=>typeof x==='string')){
+      if(!bold && /bold/i.test(f[0])) bold=f;
+      if(!reg && /regular/i.test(f[0])) reg=f;
+    }
+  }
+  if(bold) fontBold=bold; if(reg) fontReg=reg;
+}
+async function loadStyles(){
+  const BLANK={version:8,sources:{},layers:[{id:'bg',type:'background',paint:{'background-color':'#e9e6ee'}}]};
+  try{
+    const r=await fetch(LIBERTY_URL); if(!r.ok) throw new Error('HTTP '+r.status);
+    liberty=await r.json(); pickFonts(liberty);
+    hybrid=Object.assign({},liberty,{
+      sources:Object.assign({},liberty.sources,{esri:{type:'raster',tiles:[ESRI_URL],tileSize:256,maxzoom:19,attribution:'Imágenes © Esri, Maxar, Earthstar Geographics'}}),
+      layers:[{id:'esri-base',type:'raster',source:'esri'}].concat(liberty.layers.filter(l=>l.type==='symbol'))
     });
+  }catch(e){
+    liberty=BLANK; hybrid=BLANK;
+    setTimeout(()=>toast('No se pudo cargar el mapa base. Revisa tu conexión; igual puedes editar el contorno.'),800);
+  }
+}
+function setBase(b){
+  base=b;
+  document.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x.dataset.base===b));
+  map.setStyle(b==='sat'?hybrid:liberty,{diff:false});
+  map.once('style.load',()=>{ addLayers(); });
+}
 
-    const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: '&copy; Esri, Maxar, Earthstar Geographics',
-      maxNativeZoom: 19,
-      maxZoom: 22
+/* ======== Geometría de la vista ======== */
+function boundsOf(rings){
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  rings.forEach(r=>{ const b=ringBBox(r); x0=Math.min(x0,b[0]);y0=Math.min(y0,b[1]);x1=Math.max(x1,b[2]);y1=Math.max(y1,b[3]); });
+  return isFinite(x0)?[[x0,y0],[x1,y1]]:null;
+}
+function fit(rings,dur){
+  const b=boundsOf(rings); if(!b||!map) return;
+  const narrow=window.innerWidth<=820;
+  map.fitBounds(b,{padding:narrow?30:70,duration:dur==null?600:dur,maxZoom:19});
+}
+const allRings=()=>state.territorios.flatMap(t=>t.poligonos);
+
+/* ======== Panel ======== */
+function setHint(){
+  const h=$('#hint');
+  if(mode==='draw') h.textContent='Dibujando: clic para poner vértices · Enter o clic en el primer punto para cerrar · Esc cancela';
+  else if(preview) h.textContent='Así se verá en la app. Acércate: el relleno se aclara y las calles se leen mejor.';
+  else h.textContent='Arrastra un vértice para moverlo · toca un punto intermedio para añadir uno · doble clic en un vértice lo borra';
+}
+function renderLists(){
+  const lt=$('#listT'); lt.innerHTML='';
+  state.territorios.forEach((t,i)=>{
+    const li=document.createElement('li'), b=document.createElement('button');
+    b.className='item'+(i===state.sel?' on':''); b.type='button';
+    const area=t.poligonos.reduce((s,r)=>s+ringArea(r),0);
+    b.innerHTML='<span class="dot"></span><span><span class="n"></span><span class="s"></span></span>';
+    b.querySelector('.dot').style.background=colorOf(t,i);
+    b.querySelector('.n').textContent=t.nombre||'Sin nombre';
+    b.querySelector('.s').textContent=t.poligonos.length?(t.poligonos.length+(t.poligonos.length===1?' polígono':' polígonos')+' · '+km2(area)+' km²'):'Sin contorno todavía';
+    b.addEventListener('click',()=>{ state.sel=i; selRing=0; refreshAll(true); fit(t.poligonos); persist(); });
+    li.appendChild(b); lt.appendChild(li);
+  });
+  const t=cur(), lr=$('#listR'); lr.innerHTML='';
+  if(t) t.poligonos.forEach((r,i)=>{
+    const li=document.createElement('li'), b=document.createElement('button');
+    b.className='item'+(i===selRing?' on':''); b.type='button';
+    b.innerHTML='<span><span class="n"></span><span class="s"></span></span>';
+    b.querySelector('.n').textContent='Parte '+(i+1);
+    b.querySelector('.s').textContent=r.length+' vértices · '+km2(ringArea(r))+' km²';
+    b.addEventListener('click',()=>{ selRing=i; rebuildHandles(); renderLists(); fit([r]); });
+    li.appendChild(b); lr.appendChild(li);
+  });
+  if(t){
+    const tot=t.poligonos.reduce((s,r)=>s+ringArea(r),0), v=t.poligonos.reduce((s,r)=>s+r.length,0);
+    $('#statsT').textContent=t.poligonos.length?('Total: '+km2(tot)+' km² · '+v+' vértices'):'Dibuja el contorno con «Dibujar polígono».';
+  }
+  $('#btnDelR').disabled=!(t&&t.poligonos.length);
+}
+function renderForm(){
+  const t=cur(); if(!t) return;
+  $('#f_nombre').value=t.nombre; $('#f_numero').value=t.numero; $('#f_localidad').value=t.localidad; $('#f_descripcion').value=t.descripcion;
+  $('#f_norte').value=t.limites_texto.norte; $('#f_sur').value=t.limites_texto.sur;
+  $('#f_oriente').value=t.limites_texto.oriente; $('#f_occidente').value=t.limites_texto.occidente;
+  $('#f_colorAuto').checked=!t.color; $('#f_color').value=t.color||colorOf(t,state.sel); $('#f_color').disabled=!t.color;
+  renderCalles();
+}
+function renderCalles(){
+  const t=cur(), box=$('#calles'); box.innerHTML='';
+  t.calles.forEach((c,i)=>{
+    const row=document.createElement('div'); row.className='calle';
+    [['nombre','Calle o carrera'],['desde','Desde'],['hasta','Hasta']].forEach(([k,ph])=>{
+      const inp=document.createElement('input'); inp.type='text'; inp.placeholder=ph; inp.value=c[k]; inp.setAttribute('aria-label',ph); inp.autocomplete='off';
+      inp.addEventListener('input',()=>{ c[k]=inp.value; });
+      inp.addEventListener('change',commit);
+      row.appendChild(inp);
     });
+    const del=document.createElement('button'); del.type='button'; del.className='btn danger'; del.textContent='✕'; del.setAttribute('aria-label','Quitar calle');
+    del.addEventListener('click',()=>{ t.calles.splice(i,1); commit(); renderCalles(); });
+    row.appendChild(del); box.appendChild(row);
+  });
+}
+function refreshAll(withForm){
+  if(withForm) renderForm();
+  renderLists(); updateSources(); rebuildHandles(); setHint(); updateUndoBtns();
+}
 
-    const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap',
-      maxNativeZoom: 19,
-      maxZoom: 22
+/* ======== Edición de vértices ======== */
+function clearHandles(){ vMarkers.forEach(m=>m.remove()); mMarkers.forEach(m=>m.remove()); vMarkers=[]; mMarkers=[]; }
+function mid(a,b){ return [(a[0]+b[0])/2,(a[1]+b[1])/2]; }
+function placeMids(){
+  const t=cur(), r=t&&t.poligonos[selRing]; if(!r||!map) return;
+  mMarkers.forEach((m,i)=>{
+    const a=r[i], b=r[(i+1)%r.length];
+    m.setLngLat(mid(a,b));
+    const pa=map.project(a), pb=map.project(b);
+    m.getElement().style.display = Math.hypot(pa.x-pb.x,pa.y-pb.y)<30 ? 'none' : '';
+  });
+}
+function removeVertex(i){
+  const t=cur(), r=t&&t.poligonos[selRing]; if(!r) return;
+  if(r.length<=3){ toast('Un polígono necesita al menos 3 vértices.'); return; }
+  r.splice(i,1); commit(); updateSources(); rebuildHandles(); renderLists();
+}
+function rebuildHandles(){
+  if(!map) return;
+  clearHandles();
+  if(preview||mode==='draw') return;
+  const t=cur(), r=t&&t.poligonos[selRing]; if(!r) return;
+  r.forEach((p,i)=>{
+    const el=document.createElement('div'); el.className='vtx'; el.title='Arrastra para mover · doble clic o clic derecho para borrar';
+    const m=new maplibregl.Marker({element:el,draggable:true}).setLngLat(p).addTo(map);
+    m.on('drag',()=>{ const ll=m.getLngLat(); r[i]=[ll.lng,ll.lat]; updateSources(); placeMids(); });
+    m.on('dragend',()=>{ commit(); renderLists(); });
+    el.addEventListener('dblclick',ev=>{ ev.stopPropagation(); ev.preventDefault(); removeVertex(i); });
+    el.addEventListener('contextmenu',ev=>{ ev.preventDefault(); ev.stopPropagation(); removeVertex(i); });
+    el.addEventListener('click',ev=>ev.stopPropagation());
+    vMarkers.push(m);
+  });
+  r.forEach((p,i)=>{
+    const el=document.createElement('div'); el.className='mid'; el.title='Toca para añadir un vértice aquí';
+    const m=new maplibregl.Marker({element:el}).setLngLat(mid(p,r[(i+1)%r.length])).addTo(map);
+    el.addEventListener('click',ev=>{
+      ev.stopPropagation();
+      r.splice(i+1,0,mid(r[i],r[(i+1)%r.length]));
+      commit(); updateSources(); rebuildHandles(); renderLists();
     });
+    el.addEventListener('dblclick',ev=>ev.stopPropagation());
+    mMarkers.push(m);
+  });
+  placeMids();
+}
 
-    // 2. Inicializar Mapa centrado en Suba, Bogotá
-    const map = L.map('map', {
-      center: [4.745, -74.095],
-      zoom: 16,
-      minZoom: 12,
-      maxZoom: 22,
-      layers: [cartoVoyager]
+/* ======== Dibujo de polígonos nuevos ======== */
+function startDraw(){
+  if(!cur()) return;
+  mode='draw'; draft=[]; cursorPt=null; clearHandles();
+  $('#mapwrap').classList.add('draw-cursor'); map.doubleClickZoom.disable();
+  $('#btnDraw').textContent='Cerrar polígono'; $('#btnCancelDraw').hidden=false;
+  setHint(); updateSources();
+}
+function endDraw(){
+  mode='idle'; draft=[]; cursorPt=null;
+  $('#mapwrap').classList.remove('draw-cursor'); map.doubleClickZoom.enable();
+  $('#btnDraw').textContent='Dibujar polígono'; $('#btnCancelDraw').hidden=true;
+  setHint(); updateSources(); rebuildHandles();
+}
+function finishDraw(){
+  if(draft.length<3){ toast('Pon al menos 3 puntos para cerrar el polígono.'); return; }
+  const t=cur(); t.poligonos.push(draft.slice()); selRing=t.poligonos.length-1;
+  endDraw(); commit(); renderLists(); updateSources(); rebuildHandles();
+}
+
+/* ======== Calles del borde (experimental) ======== */
+function detectCalles(){
+  const t=cur();
+  if(!t||!t.poligonos.length){ toast('Dibuja primero el contorno.'); return; }
+  const tol=Math.max(5,+$('#tol').value||30);
+  const st=map.getStyle(), srcId=Object.keys(st.sources).find(k=>st.sources[k].type==='vector');
+  if(!srcId){ toast('Necesito el mapa de calles con conexión a internet.'); return; }
+  fit(t.poligonos,0);
+  setTimeout(()=>{
+    let feats=[]; try{ feats=map.querySourceFeatures(srcId,{sourceLayer:'transportation_name'}); }catch(e){}
+    if(!feats.length){ toast('Aún no hay calles cargadas. Espera un momento a que cargue el mapa y vuelve a intentar.'); return; }
+    const found=new Set();
+    for(const f of feats){
+      const name=f.properties && (f.properties.name||f.properties['name:latin']);
+      if(!name||found.has(name)) continue;
+      const g=f.geometry;
+      const lines=g.type==='LineString'?[g.coordinates]:g.type==='MultiLineString'?g.coordinates:[];
+      let near=false;
+      for(const ln of lines){ for(const pt of ln){ for(const r of t.poligonos){ if(distToRing(pt,r)<=tol){ near=true; break; } } if(near) break; } if(near) break; }
+      if(near) found.add(name);
+    }
+    const have=new Set(t.calles.map(c=>c.nombre.trim().toLowerCase()));
+    const nuevas=[...found].sort((a,b)=>a.localeCompare(b,'es')).filter(n=>!have.has(n.toLowerCase()));
+    nuevas.forEach(n=>t.calles.push({nombre:n,desde:'',hasta:''}));
+    if(nuevas.length){ commit(); renderCalles(); toast('Se añadieron '+nuevas.length+' calles. Revisa la lista y completa «desde» y «hasta».'); }
+    else toast(found.size?'Esas calles ya estaban en la lista.':'No encontré calles a menos de '+tol+' m del borde.');
+  },900);
+}
+
+/* ======== Importar y exportar ======== */
+let pendingImport=null;
+function currentBundle(){ return toBundle(state.territorios,state.grupos,today()); }
+function download(name,text,type){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:type||'application/json'})); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); return true; }
+  catch(e){
+    const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select();
+    let ok=false; try{ ok=document.execCommand('copy'); }catch(_){} ta.remove(); return ok;
+  }
+}
+function handleFile(file){
+  if(!file) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const parsed=parseInput(JSON.parse(rd.result));
+      const ids=new Set(state.territorios.map(t=>t.id));
+      const upd=parsed.territorios.filter(t=>ids.has(t.id)).length, nue=parsed.territorios.length-upd;
+      pendingImport=parsed;
+      $('#dlgTitle').textContent='Importar '+parsed.territorios.length+(parsed.territorios.length===1?' territorio':' territorios');
+      $('#dlgText').textContent=nue+' nuevos y '+upd+' que actualizan a los que ya tienes. «Combinar» mantiene el resto; «Reemplazar todo» borra lo actual.';
+      $('#dlg').showModal();
+    }catch(e){ toast('No se pudo leer el archivo: '+e.message); }
+  };
+  rd.readAsText(file);
+}
+function applyImport(replace){
+  if(!pendingImport) return;
+  const p=pendingImport; pendingImport=null;
+  if(replace){ state.territorios=p.territorios; state.grupos=p.grupos||[]; state.sel=0; }
+  else{
+    p.territorios.forEach(t=>{
+      const i=state.territorios.findIndex(x=>x.id===t.id);
+      if(i>=0) state.territorios[i]=t; else state.territorios.push(t);
     });
+    if(p.grupos) state.grupos=p.grupos;
+  }
+  selRing=0; commit(); refreshAll(true); fit(allRings());
+  toast('Importado: ahora tienes '+state.territorios.length+(state.territorios.length===1?' territorio.':' territorios.'));
+}
 
-    // Control de Capas
-    const baseMaps = {
-      "🛵 Estilo Rappi / Urbano (CARTO)": cartoVoyager,
-      "🛰️ Satélite Alta Resolución (Esri)": esriSatellite,
-      "🗺️ OpenStreetMap": osmStandard
-    };
-    L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+/* ======== Arranque ======== */
+function bindUI(){
+  const setters={
+    f_nombre:v=>cur().nombre=v, f_numero:v=>cur().numero=v, f_localidad:v=>cur().localidad=v, f_descripcion:v=>cur().descripcion=v,
+    f_norte:v=>cur().limites_texto.norte=v, f_sur:v=>cur().limites_texto.sur=v,
+    f_oriente:v=>cur().limites_texto.oriente=v, f_occidente:v=>cur().limites_texto.occidente=v
+  };
+  Object.keys(setters).forEach(id=>{
+    const el=$('#'+id);
+    el.addEventListener('input',()=>{ setters[id](el.value); renderLists(); updateSources(); });
+    el.addEventListener('change',commit);
+  });
+  $('#f_colorAuto').addEventListener('change',e=>{
+    const t=cur();
+    if(e.target.checked){ t.color=null; $('#f_color').disabled=true; }
+    else{ t.color=$('#f_color').value; $('#f_color').disabled=false; }
+    commit(); renderLists(); updateSources();
+  });
+  $('#f_color').addEventListener('input',e=>{ cur().color=e.target.value; renderLists(); updateSources(); });
+  $('#f_color').addEventListener('change',commit);
 
-    // Grupos de capas dibujadas
-    const drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
+  $('#btnUndo').onclick=undo; $('#btnRedo').onclick=redo;
+  $('#btnNewT').onclick=()=>{
+    const taken=new Set(state.territorios.map(t=>t.id));
+    const n=state.territorios.length+1;
+    state.territorios.push(normTerr({id:uniqueId('territorio-'+n,taken),nombre:'Territorio nuevo',poligonos:[]}));
+    state.sel=state.territorios.length-1; selRing=0; commit(); refreshAll(true); startDraw();
+    toast('Dibuja el contorno de «Territorio nuevo» y ponle nombre.');
+  };
+  $('#btnDelT').onclick=()=>{
+    if(state.territorios.length<=1){ toast('Deja al menos un territorio.'); return; }
+    if(!confirm('¿Eliminar «'+(cur().nombre||'Sin nombre')+'»?')) return;
+    state.territorios.splice(state.sel,1); state.sel=Math.max(0,state.sel-1); selRing=0; commit(); refreshAll(true);
+  };
+  $('#btnAddCalle').onclick=()=>{ cur().calles.push({nombre:'',desde:'',hasta:''}); renderCalles(); const ins=document.querySelectorAll('#calles .calle input'); if(ins.length) ins[ins.length-3].focus(); };
+  $('#btnDetect').onclick=detectCalles;
+  $('#btnDraw').onclick=()=>{ if(mode==='draw') finishDraw(); else startDraw(); };
+  $('#btnCancelDraw').onclick=endDraw;
+  $('#btnDelR').onclick=()=>{
+    const t=cur(); if(!t||!t.poligonos.length) return;
+    t.poligonos.splice(selRing,1); selRing=Math.max(0,selRing-1); commit(); refreshAll(false);
+  };
+  $('#btnFit').onclick=()=>{ const t=cur(); fit(t&&t.poligonos.length?t.poligonos:allRings()); };
+  $('#btnDownload').onclick=()=>{ download('territorios.json',JSON.stringify(currentBundle(),null,1)); toast('Descargado territorios.json'); };
+  $('#btnGeo').onclick=()=>{ download('territorios.geojson',JSON.stringify(toGeoJSON(state.territorios),null,1),'application/geo+json'); };
+  $('#btnCopy').onclick=async()=>{ toast(await copyText(JSON.stringify(currentBundle(),null,1)) ? 'JSON copiado. Pégalo en el chat.' : 'No pude copiar. Usa «Descargar JSON».'); };
+  $('#btnImport').onclick=()=>$('#file').click();
+  $('#file').addEventListener('change',e=>{ handleFile(e.target.files[0]); e.target.value=''; });
+  $('#btnReset').onclick=()=>{
+    if(!confirm('Esto descarta tus cambios y vuelve al borrador automático de Las Flores. ¿Continuar?')) return;
+    state=freshState(); selRing=0; commit(); refreshAll(true); fit(allRings());
+  };
+  $('#dlgMerge').onclick=()=>{ $('#dlg').close(); applyImport(false); };
+  $('#dlgReplace').onclick=()=>{ $('#dlg').close(); applyImport(true); };
+  $('#dlgCancel').onclick=()=>{ pendingImport=null; $('#dlg').close(); };
+  document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{ if(b.dataset.base!==base) setBase(b.dataset.base); }));
+  $('#chkRef').addEventListener('change',e=>{
+    showRef=e.target.checked;
+    ['ref-line','ref-lbl'].forEach(id=>{ if(map.getLayer(id)) map.setLayoutProperty(id,'visibility',showRef&&!preview?'visible':'none'); });
+  });
+  $('#chkPrev').addEventListener('change',e=>{
+    preview=e.target.checked;
+    if(preview&&mode==='draw') endDraw();
+    ['ref-line','ref-lbl'].forEach(id=>{ if(map.getLayer(id)) map.setLayoutProperty(id,'visibility',showRef&&!preview?'visible':'none'); });
+    updateSources(); rebuildHandles(); setHint();
+  });
+  window.addEventListener('keydown',e=>{
+    const tag=(e.target.tagName||'').toLowerCase(), typing=tag==='input'||tag==='textarea';
+    if(mode==='draw'){
+      if(e.key==='Enter'&&!typing){ e.preventDefault(); finishDraw(); return; }
+      if(e.key==='Escape'){ endDraw(); return; }
+    }
+    if(typing) return;
+    const k=e.key.toLowerCase();
+    if((e.ctrlKey||e.metaKey)&&k==='z'&&!e.shiftKey){ e.preventDefault(); undo(); }
+    else if((e.ctrlKey||e.metaKey)&&(k==='y'||(k==='z'&&e.shiftKey))){ e.preventDefault(); redo(); }
+  });
+  const wrap=$('#mapwrap');
+  ['dragenter','dragover'].forEach(ev=>wrap.addEventListener(ev,e=>{ e.preventDefault(); }));
+  wrap.addEventListener('drop',e=>{ e.preventDefault(); handleFile(e.dataTransfer.files[0]); });
+}
 
-    // Herramientas de Dibujo
-    const drawControl = new L.Control.Draw({
-      position: 'topleft',
-      draw: {
-        polygon: {
-          allowIntersection: false,
-          showArea: true,
-          shapeOptions: { color: '#7c3aed', weight: 3, fillOpacity: 0.15 }
-        },
-        polyline: false,
-        circle: false,
-        rectangle: false,
-        circlemarker: false,
-        marker: false
-      },
-      edit: {
-        featureGroup: drawnItems,
-        remove: false
+function bindMap(){
+  map.on('click',e=>{
+    if(e.originalEvent && e.originalEvent.target.closest && e.originalEvent.target.closest('.vtx,.mid')) return;
+    if(mode==='draw'){
+      const p=[e.lngLat.lng,e.lngLat.lat];
+      if(draft.length>=3){
+        const f=map.project(draft[0]);
+        if(Math.hypot(f.x-e.point.x,f.y-e.point.y)<12){ finishDraw(); return; }
       }
-    });
-    map.addControl(drawControl);
-
-    // Estado
-    let blocks = []; // { id, number, layer }
-    let territoryBoundaryLayer = null;
-    let pendingLayer = null;
-
-    // Manejo de Creación de Polígonos
-    map.on(L.Draw.Event.CREATED, function (e) {
-      const layer = e.layer;
-      const mode = document.querySelector('input[name="drawMode"]:checked').value;
-
-      if (mode === 'territory') {
-        if (territoryBoundaryLayer) {
-          drawnItems.removeLayer(territoryBoundaryLayer);
+      draft.push(p); updateSources(); return;
+    }
+    const pt=[e.lngLat.lng,e.lngLat.lat];
+    for(let ti=state.territorios.length-1;ti>=0;ti--){
+      const rs=state.territorios[ti].poligonos;
+      for(let ri=0;ri<rs.length;ri++){
+        if(pointInRing(pt,rs[ri])){
+          if(ti!==state.sel||ri!==selRing){ state.sel=ti; selRing=ri; refreshAll(true); persist(); }
+          return;
         }
-        layer.setStyle({ color: '#dc2626', weight: 3, dashArray: '6, 6', fillOpacity: 0.05 });
-        territoryBoundaryLayer = layer;
-        drawnItems.addLayer(layer);
-        alert("✅ Límite exterior del territorio definido.");
-      } else {
-        pendingLayer = layer;
-        // Autoincrementar sugerencia de número
-        const nextNum = blocks.length > 0 ? (Math.max(...blocks.map(b => parseInt(b.number) || 0)) + 1) : 1;
-        document.getElementById('modal-block-num').value = nextNum;
-        document.getElementById('block-modal').classList.add('active');
-        document.getElementById('modal-block-num').focus();
-      }
-    });
-
-    function confirmBlockModal() {
-      const num = document.getElementById('modal-block-num').value.trim() || (blocks.length + 1);
-      const layer = pendingLayer;
-      const id = 'b_' + Date.now();
-
-      layer.setStyle({ color: '#7c3aed', weight: 3, fillOpacity: 0.15 });
-      layer.bindTooltip("M " + num, { permanent: true, direction: "center", className: 'block-map-label' });
-      drawnItems.addLayer(layer);
-
-      blocks.push({ id, number: num, layer });
-      updateBlocksList();
-      cancelBlockModal();
-    }
-
-    function cancelBlockModal() {
-      document.getElementById('block-modal').classList.remove('active');
-      pendingLayer = null;
-    }
-
-    function updateBlocksList() {
-      const list = document.getElementById('blocks-list');
-      document.getElementById('blocks-count').innerText = blocks.length;
-
-      if (blocks.length === 0) {
-        list.innerHTML = '<li style="color: var(--text-muted); justify-content: center; font-style: italic;">Sin manzanas dibujadas</li>';
-        return;
-      }
-
-      list.innerHTML = '';
-      blocks.forEach(b => {
-        const li = document.createElement('li');
-        li.innerHTML = `
-          <strong style="color: var(--primary);">Manzana ${b.number}</strong>
-          <div class="block-actions">
-            <button class="btn-icon" title="Centrar" onclick="focusBlock('${b.id}')">🎯</button>
-            <button class="btn-icon del" title="Eliminar" onclick="deleteBlock('${b.id}')">🗑️</button>
-          </div>
-        `;
-        list.appendChild(li);
-      });
-    }
-
-    function focusBlock(id) {
-      const b = blocks.find(x => x.id === id);
-      if (b) map.fitBounds(b.layer.getBounds(), { padding: [50, 50], maxZoom: 19 });
-    }
-
-    function deleteBlock(id) {
-      const idx = blocks.findIndex(x => x.id === id);
-      if (idx !== -1) {
-        drawnItems.removeLayer(blocks[idx].layer);
-        blocks.splice(idx, 1);
-        updateBlocksList();
       }
     }
+  });
+  map.on('zoom',placeMids);
+  map.on('mousemove',e=>{ if(mode==='draw'&&draft.length){ cursorPt=[e.lngLat.lng,e.lngLat.lat]; setSrc('draft',fcDraft()); } });
+}
 
-    function clearAllBlocks() {
-      if (!confirm("¿Eliminar todas las manzanas del mapa?")) return;
-      blocks.forEach(b => drawnItems.removeLayer(b.layer));
-      blocks = [];
-      updateBlocksList();
-    }
-
-    // Cargar archivo JSON existente
-    document.getElementById('file-input').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        try {
-          const data = JSON.parse(evt.target.result);
-          loadTerritoryData(data);
-        } catch (err) {
-          alert("Error al leer el archivo JSON: " + err.message);
-        }
-      };
-      reader.readAsText(file);
-    });
-
-    function loadTerritoryData(data) {
-      // Limpiar mapa previo
-      drawnItems.clearLayers();
-      blocks = [];
-      territoryBoundaryLayer = null;
-
-      if (data.numero_territorio) {
-        document.getElementById('territory-num').value = data.numero_territorio;
-      }
-
-      // 1. Cargar Límites del territorio
-      if (data.limites && data.limites.length > 0) {
-        territoryBoundaryLayer = L.polygon(data.limites, {
-          color: '#dc2626',
-          weight: 3,
-          dashArray: '6, 6',
-          fillOpacity: 0.05
-        });
-        drawnItems.addLayer(territoryBoundaryLayer);
-      }
-
-      // 2. Cargar Manzanas
-      if (data.manzanas && Array.isArray(data.manzanas)) {
-        data.manzanas.forEach(m => {
-          const layer = L.polygon(m.puntos, {
-            color: '#7c3aed',
-            weight: 3,
-            fillOpacity: 0.15
-          });
-          layer.bindTooltip("M " + m.numero, { permanent: true, direction: "center", className: 'block-map-label' });
-          drawnItems.addLayer(layer);
-          blocks.push({
-            id: m.id || ('b_' + Date.now() + Math.random()),
-            number: m.numero,
-            layer: layer
-          });
-        });
-      }
-
-      updateBlocksList();
-
-      if (drawnItems.getBounds().isValid()) {
-        map.fitBounds(drawnItems.getBounds(), { padding: [40, 40] });
-      }
-      alert(`✅ Se cargó el Territorio ${data.numero_territorio || ''} con ${blocks.length} manzanas.`);
-    }
-
-    // Buscador de Direcciones usando Nominatim OSM
-    async function searchAddress() {
-      const q = document.getElementById('search-input').value.trim();
-      if (!q) return;
-
-      const query = q.toLowerCase().includes('bogota') || q.toLowerCase().includes('colombia') ? q : `${q}, Bogotá, Colombia`;
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
-        const results = await res.json();
-        if (results && results.length > 0) {
-          const first = results[0];
-          map.setView([parseFloat(first.lat), parseFloat(first.lon)], 17);
-        } else {
-          alert("No se encontró esa dirección.");
-        }
-      } catch (e) {
-        alert("Error de conexión al buscar dirección.");
-      }
-    }
-
-    // Exportar JSON
-    document.getElementById('export-btn').addEventListener('click', function() {
-      const terrNum = document.getElementById('territory-num').value.trim();
-      if (!terrNum) {
-        alert("Por favor ingresa el número del territorio.");
-        return;
-      }
-
-      if (blocks.length === 0) {
-        alert("Debes tener al menos 1 manzana dibujada.");
-        return;
-      }
-
-      if (!territoryBoundaryLayer) {
-        alert("Debes dibujar el límite exterior del territorio (selecciona 'Límite Exterior' y traza el polígono).");
-        return;
-      }
-
-      const boundaryLatLngs = territoryBoundaryLayer.getLatLngs()[0];
-      const limitsArr = boundaryLatLngs.map(ll => [ll.lat, ll.lng]);
-
-      const exportData = {
-        territorio_id: "T" + terrNum,
-        numero_territorio: terrNum,
-        limites: limitsArr,
-        manzanas: blocks.map((b, i) => {
-          const latlngs = b.layer.getLatLngs()[0];
-          return {
-            id: `m_${b.number}_b${Date.now()}_${i}`,
-            numero: b.number,
-            puntos: latlngs.map(ll => [ll.lat, ll.lng])
-          };
-        })
-      };
-
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
-      const a = document.createElement('a');
-      a.setAttribute("href", dataStr);
-      a.setAttribute("download", `territorio_${terrNum}.json`);
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    });
-  </script>
+async function start(){
+  state=loadState(); commit(); selRing=0;
+  await loadStyles();
+  const b=boundsOf(allRings());
+  // Ojo: no pasar center/zoom con valor undefined; MapLibre los toma como NaN y no puede crear el mapa.
+  const opts={container:'map', style:liberty, maxZoom:22, hash:false, attributionControl:{compact:true}};
+  if(b){ opts.bounds=b; opts.fitBoundsOptions={padding:70}; } else { opts.center=[-74.102,4.745]; opts.zoom=14; }
+  map=new maplibregl.Map(opts);
+  map.addControl(new maplibregl.NavigationControl({visualizePitch:true}),'top-right');
+  map.addControl(new maplibregl.ScaleControl({unit:'metric'}),'bottom-left');
+  bindUI(); bindMap(); refreshAll(true);
+  map.on('load',()=>{ addLayers(); updateSources(); });
+  window.__territorios=()=>currentBundle();
+  window.__map=map;
+}
+start();
+})();
+</script>
 </body>
 </html>
