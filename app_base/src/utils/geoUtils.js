@@ -79,9 +79,7 @@ function distToRing(pt, r) {
   return best;
 }
 
-// Punto óptimo interior para colocar la etiqueta centrada sin tapar bordes
-export function labelPoint(r) {
-  if (!r || r.length < 3) return [0, 0];
+function ringBBox(r) {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const p of r) {
     if (p[0] < x0) x0 = p[0];
@@ -89,22 +87,32 @@ export function labelPoint(r) {
     if (p[1] < y0) y0 = p[1];
     if (p[1] > y1) y1 = p[1];
   }
+  return [x0, y0, x1, y1];
+}
 
-  const N = 24;
+// Punto óptimo interior para colocar la etiqueta centrada (algoritmo en 2 pasadas idéntico al editor)
+export function labelPoint(r) {
+  if (!r || r.length < 3) return [0, 0];
+  const [x0, y0, x1, y1] = ringBBox(r), N = 28;
   let best = null, bd = -1;
-  for (let i = 0; i <= N; i++) {
-    for (let j = 0; j <= N; j++) {
-      const p = [x0 + ((x1 - x0) * i) / N, y0 + ((y1 - y0) * j) / N];
-      if (!pointInRing(p, r)) continue;
-      const d = distToRing(p, r);
-      if (d > bd) {
-        bd = d;
-        best = p;
+  function scan(a0, a1, b0, b1) {
+    for (let i = 0; i <= N; i++) {
+      for (let j = 0; j <= N; j++) {
+        const p = [a0 + ((a1 - a0) * i) / N, b0 + ((b1 - b0) * j) / N];
+        if (!pointInRing(p, r)) continue;
+        const d = distToRing(p, r);
+        if (d > bd) {
+          bd = d;
+          best = p;
+        }
       }
     }
   }
-
-  return best || [(x0 + x1) / 2, (y0 + y1) / 2];
+  scan(x0, x1, y0, y1);
+  if (!best) return [(x0 + x1) / 2, (y0 + y1) / 2];
+  const dx = (x1 - x0) / N, dy = (y1 - y0) / N;
+  scan(best[0] - dx, best[0] + dx, best[1] - dy, best[1] + dy);
+  return best;
 }
 
 // Genera un GeoJSON FeatureCollection optimizado a partir del bundle v3
@@ -113,13 +121,13 @@ export function buildGeoJSONFeatureCollection(territorios) {
 
   territorios.forEach((t, index) => {
     const color = t.color || TERRITORY_PALETTE[index % TERRITORY_PALETTE.length];
-    const rings = t.poligonos || [];
+    const rings = (t.poligonos || []).filter(r => Array.isArray(r) && r.length >= 3);
     if (rings.length === 0) return;
 
     // Convertir anillos a [lng, lat]
     const geoJSONCoordinates = toGeoJSONCoords(rings);
     
-    // Encontrar el anillo más grande para el punto de etiqueta
+    // Encontrar el anillo con mayor área para centrar la etiqueta
     let largestRing = rings[0];
     let maxLen = rings[0].length;
     for (let k = 1; k < rings.length; k++) {
@@ -148,7 +156,7 @@ export function buildGeoJSONFeatureCollection(territorios) {
       },
       geometry: {
         type: 'MultiPolygon',
-        coordinates: [geoJSONCoordinates]
+        coordinates: geoJSONCoordinates.map(ring => [ring])
       }
     });
   });

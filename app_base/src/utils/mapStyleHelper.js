@@ -2,6 +2,23 @@ import { LIBERTY_STYLE_URL, ESRI_SATELLITE_URL } from '../config/mapa';
 
 let cachedLibertyStyle = null;
 
+// Helper para detectar fuentes disponibles en el estilo de mapa (glyphs OpenFreeMap)
+export function pickFonts(style) {
+  let bold = null, reg = null;
+  for (const l of (style?.layers || [])) {
+    const f = l.layout && l.layout['text-font'];
+    if (Array.isArray(f) && f.length && f.every(x => typeof x === 'string')) {
+      if (!bold && /bold/i.test(f[0])) bold = f;
+      if (!reg && !/bold/i.test(f[0])) reg = f;
+      if (bold && reg) break;
+    }
+  }
+  return {
+    bold: bold || ['Noto Sans Bold', 'Open Sans Bold'],
+    reg: reg || ['Noto Sans Regular', 'Open Sans Regular']
+  };
+}
+
 // Obtiene el estilo base Liberty de OpenFreeMap
 export async function getLibertyStyle() {
   if (cachedLibertyStyle) return cachedLibertyStyle;

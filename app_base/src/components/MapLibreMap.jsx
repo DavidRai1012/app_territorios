@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { getLibertyStyle, getSatelliteHybridStyle } from '../utils/mapStyleHelper';
+import { getLibertyStyle, getSatelliteHybridStyle, pickFonts } from '../utils/mapStyleHelper';
 import { buildGeoJSONFeatureCollection, buildLabelsFeatureCollection, getBoundsFromGeoJSON } from '../utils/geoUtils';
 
 export default function MapLibreMap({
@@ -16,17 +16,6 @@ export default function MapLibreMap({
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const isLoadedRef = useRef(false);
-
-  // GPS y Orientación
-  const [gpsMode, setGpsMode] = useState(0); // 0: apagado, 1: siguiendo, 2: siguiendo + rotando
-  const gpsWatchIdRef = useRef(null);
-  const userCoordsRef = useRef(null);
-  const headingRef = useRef(0);
-  const smoothHeadingRef = useRef(0);
-  const animFrameRef = useRef(null);
-
-  // Estado de rotación actual para la brújula
-  const [compassBearing, setCompassBearing] = useState(0);
 
   // 1. Inicializar Mapa MapLibre GL
   useEffect(() => {
@@ -53,18 +42,15 @@ export default function MapLibreMap({
         attributionControl: false
       });
 
-      // Atribución compacta
+      // Atribución compacta en esquina inferior
       map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
 
       map.on('load', () => {
         isLoadedRef.current = true;
         mapRef.current = map;
 
-        // Configurar capas de territorios
+        // Configurar capas de territorios y etiquetas
         setupTerritoryLayers(map, territories, selectedIds, baseMapType);
-
-        // Configurar capa de GPS del usuario
-        setupUserLocationLayers(map);
 
         // Encuadre inicial si hay territorios
         const geoJSON = buildGeoJSONFeatureCollection(territories);
@@ -74,11 +60,7 @@ export default function MapLibreMap({
         }
       });
 
-      map.on('rotate', () => {
-        setCompassBearing(Math.round(map.getBearing()));
-      });
-
-      // Click en territorio para abrir ficha
+      // Click en territorio para abrir ficha de detalle
       map.on('click', 'territorios-fill', (e) => {
         if (e.features && e.features.length > 0) {
           const clickedId = e.features[0].properties.id;
@@ -120,7 +102,6 @@ export default function MapLibreMap({
       map.setStyle(newStyle, { diff: false });
       map.once('style.load', () => {
         setupTerritoryLayers(map, territories, selectedIds, baseMapType);
-        setupUserLocationLayers(map);
       });
     }
 
@@ -141,7 +122,7 @@ export default function MapLibreMap({
     }
   }, [territories]);
 
-  // 4. Filtrado instantáneo (sin recrear capas ni nodos DOM)
+  // 4. Filtrado reactivo e instantáneo (sin recrear capas)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isLoadedRef.current) return;
@@ -173,165 +154,14 @@ export default function MapLibreMap({
     }
   }, [autoFitTrigger]);
 
-  // 7. Lógica del Sensor GPS y Brújula de orientación
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    if (gpsMode === 0) {
-      // Apagado
-      if (gpsWatchIdRef.current) navigator.geolocation.clearWatch(gpsWatchIdRef.current);
-      gpsWatchIdRef.current = null;
-      userCoordsRef.current = null;
-      clearUserLocationData(map);
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      return;
-    }
-
-    // Modo 1 o 2: Activar GPS
-    if (navigator.geolocation) {
-      gpsWatchIdRef.current = navigator.geolocation.watchPosition(
-        (pos) => {
-          const lng = pos.coords.longitude;
-          const lat = pos.coords.latitude;
-          const accuracy = pos.coords.accuracy || 15;
-          userCoordsRef.current = [lng, lat];
-
-          updateUserLocationData(map, [lng, lat], accuracy);
-
-          // Centrar en usuario
-          if (gpsMode >= 1) {
-            map.easeTo({ center: [lng, lat], duration: 400 });
-          }
-
-          // Si el GPS reporta rumbo fiable con movimiento
-          if (pos.coords.heading !== null && !isNaN(pos.coords.heading) && pos.coords.speed > 0.5) {
-            headingRef.current = pos.coords.heading;
-          }
-        },
-        (err) => console.warn('Error GPS:', err),
-        { enableHighAccuracy: true, maximumAge: 1000 }
-      );
-    }
-
-    // Si modo es 2 (Rotando con rumbo): escuchar orientación del dispositivo
-    if (gpsMode === 2) {
-      const handleOrientation = (e) => {
-        let heading = null;
-
-        if (e.webkitCompassHeading != null) {
-          // iOS
-          heading = e.webkitCompassHeading;
-        } else if (e.alpha != null && e.beta != null && e.gamma != null) {
-          // Android compensado por inclinación W3C
-          const rad = Math.PI / 180;
-          const x = e.beta * rad;
-          const y = e.gamma * rad;
-          const z = e.alpha * rad;
-
-          const cy = Math.cos(y);
-          const sy = Math.sin(y);
-          const cx = Math.cos(x);
-          const sx = Math.sin(x);
-          const cz = Math.cos(z);
-          const sz = Math.sin(z);
-
-          const Vx = -cz * sy - sz * sx * cy;
-          const Vy = -sz * sy + cz * sx * cy;
-
-          let compass = Math.atan2(Vx, Vy) * (180 / Math.PI);
-          if (compass < 0) compass += 360;
-
-          // Corrección con orientación de pantalla
-          const screenAngle = (window.screen.orientation && window.screen.orientation.angle) || 0;
-          heading = (compass + screenAngle) % 360;
-        }
-
-        if (heading !== null) {
-          headingRef.current = heading;
-        }
-      };
-
-      window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-      window.addEventListener('deviceorientation', handleOrientation, true);
-
-      // Bucle de animación suave (filtro pasa-bajos)
-      const updateHeadingLoop = () => {
-        const target = headingRef.current;
-        let current = smoothHeadingRef.current;
-
-        // Manejo del salto de 0 a 360
-        let diff = (target - current + 180) % 360 - 180;
-        smoothHeadingRef.current = (current + diff * 0.15 + 360) % 360;
-
-        if (mapRef.current && isLoadedRef.current) {
-          mapRef.current.setBearing(smoothHeadingRef.current);
-        }
-
-        animFrameRef.current = requestAnimationFrame(updateHeadingLoop);
-      };
-
-      animFrameRef.current = requestAnimationFrame(updateHeadingLoop);
-
-      return () => {
-        window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
-        window.removeEventListener('deviceorientation', handleOrientation, true);
-        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      };
-    }
-  }, [gpsMode]);
-
-  const toggleGpsMode = () => {
-    setGpsMode((prev) => (prev + 1) % 3);
-  };
-
-  const resetNorth = () => {
-    if (mapRef.current) {
-      mapRef.current.easeTo({ bearing: 0, pitch: tiltEnabled ? 35 : 0, duration: 400 });
-    }
-  };
-
   return (
     <div className="maplibre-wrapper">
       <div ref={mapContainerRef} className="maplibre-container" />
-
-      {/* Botones de Control Flotantes */}
-      <div className="map-fab-column">
-        {/* Botón Brújula (Restablecer Norte) */}
-        {compassBearing !== 0 && (
-          <button
-            className="fab-btn"
-            onClick={resetNorth}
-            title="Restablecer Norte"
-          >
-            <span style={{ display: 'inline-block', transform: `rotate(${-compassBearing}deg)` }}>
-              ⬆️
-            </span>
-          </button>
-        )}
-
-        {/* Botón GPS (3 estados: Apagado / Centrado / Rotando) */}
-        <button
-          className={`fab-btn ${gpsMode > 0 ? 'active' : ''}`}
-          onClick={toggleGpsMode}
-          title={
-            gpsMode === 0
-              ? 'Activar GPS'
-              : gpsMode === 1
-              ? 'GPS activo (centrado)'
-              : 'GPS activo (centrado + rotando)'
-          }
-        >
-          {gpsMode === 0 && '🎯'}
-          {gpsMode === 1 && '📍'}
-          {gpsMode === 2 && '🧭'}
-        </button>
-      </div>
     </div>
   );
 }
 
-// Configura las 3 capas GeoJSON de territorios en MapLibre
+// Configura las capas GeoJSON de territorios y etiquetas con estilo tipo Editor
 function setupTerritoryLayers(map, territories, selectedIds, baseMapType) {
   const geoJSON = buildGeoJSONFeatureCollection(territories);
   const labelsGeoJSON = buildLabelsFeatureCollection(geoJSON);
@@ -343,6 +173,8 @@ function setupTerritoryLayers(map, territories, selectedIds, baseMapType) {
       type: 'geojson',
       data: geoJSON
     });
+  } else {
+    map.getSource('territorios-source').setData(geoJSON);
   }
 
   if (!map.getSource('territorios-labels-source')) {
@@ -350,9 +182,15 @@ function setupTerritoryLayers(map, territories, selectedIds, baseMapType) {
       type: 'geojson',
       data: labelsGeoJSON
     });
+  } else {
+    map.getSource('territorios-labels-source').setData(labelsGeoJSON);
   }
 
-  // 1. Capa Relleno (Fill)
+  const style = map.getStyle();
+  const fonts = pickFonts(style);
+  const firstSym = (style.layers?.find(l => l.type === 'symbol') || {}).id;
+
+  // 1. Capa Relleno (Fill) debajo de las etiquetas del mapa base
   if (!map.getLayer('territorios-fill')) {
     map.addLayer({
       id: 'territorios-fill',
@@ -361,7 +199,6 @@ function setupTerritoryLayers(map, territories, selectedIds, baseMapType) {
       filter: filter,
       paint: {
         'fill-color': ['get', 'color'],
-        // El relleno se aclara al acercarse (22% lejos, 8% cerca)
         'fill-opacity': [
           'interpolate',
           ['linear'],
@@ -370,10 +207,10 @@ function setupTerritoryLayers(map, territories, selectedIds, baseMapType) {
           17, 0.08
         ]
       }
-    });
+    }, firstSym);
   }
 
-  // 2. Capa Borde (Line)
+  // 2. Capa Borde (Line) debajo de las etiquetas del mapa base
   if (!map.getLayer('territorios-line')) {
     map.addLayer({
       id: 'territorios-line',
@@ -382,13 +219,19 @@ function setupTerritoryLayers(map, territories, selectedIds, baseMapType) {
       filter: filter,
       paint: {
         'line-color': ['get', 'color'],
-        'line-width': 2.5,
+        'line-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          12, 2.2,
+          20, 3.5
+        ],
         'line-opacity': 0.95
       }
-    });
+    }, firstSym);
   }
 
-  // 3. Capa Nombres Centrados (Symbol)
+  // 3. Capa Nombres Centrados (Symbol) - Estilo idéntico al Editor con escalado dinámico
   const isSat = baseMapType === 'sat';
   if (!map.getLayer('territorios-labels')) {
     map.addLayer({
@@ -398,80 +241,33 @@ function setupTerritoryLayers(map, territories, selectedIds, baseMapType) {
       filter: filter,
       layout: {
         'text-field': ['get', 'nombre'],
-        'text-font': ['Noto Sans Bold', 'Open Sans Bold'],
-        'text-size': 13,
+        'text-font': fonts.bold,
+        'text-size': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          12, 13,
+          15, 20,
+          18, 28,
+          21, 34
+        ],
         'text-anchor': 'center',
-        'text-allow-overlap': true
+        'text-allow-overlap': true,
+        'text-ignore-placement': true,
+        'text-max-width': 8
       },
       paint: {
-        'text-color': isSat ? '#ffffff' : '#1e293b',
-        'text-halo-color': isSat ? '#000000' : '#ffffff',
-        'text-halo-width': 2,
-        // La opacidad baja en zoom >= 17 para no tapar nombres de calles
+        'text-color': isSat ? '#ffffff' : '#251f2e',
+        'text-halo-color': isSat ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.95)',
+        'text-halo-width': 2.2,
         'text-opacity': [
           'interpolate',
           ['linear'],
           ['zoom'],
-          13, 0.95,
-          16.5, 0.85,
-          17.5, 0.2,
-          18, 0.0
+          16, 1.0,
+          18, 0.4
         ]
       }
     });
   }
-}
-
-// Configura la fuente GeoJSON para la posición GPS
-function setupUserLocationLayers(map) {
-  if (!map.getSource('user-location-source')) {
-    map.addSource('user-location-source', {
-      type: 'geojson',
-      data: {
-        type: 'FeatureCollection',
-        features: []
-      }
-    });
-  }
-
-  if (!map.getLayer('user-location-point')) {
-    map.addLayer({
-      id: 'user-location-point',
-      type: 'circle',
-      source: 'user-location-source',
-      paint: {
-        'circle-radius': 7,
-        'circle-color': '#7c3aed',
-        'circle-stroke-width': 2.5,
-        'circle-stroke-color': '#ffffff'
-      }
-    });
-  }
-}
-
-function updateUserLocationData(map, lngLat, accuracy) {
-  const source = map.getSource('user-location-source');
-  if (!source) return;
-
-  source.setData({
-    type: 'FeatureCollection',
-    features: [
-      {
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: lngLat
-        }
-      }
-    ]
-  });
-}
-
-function clearUserLocationData(map) {
-  const source = map.getSource('user-location-source');
-  if (!source) return;
-  source.setData({
-    type: 'FeatureCollection',
-    features: []
-  });
 }
