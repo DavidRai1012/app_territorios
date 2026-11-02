@@ -65,6 +65,12 @@ jobs:
             sed -i '/<\/manifest>/i \    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="false" />' "$MANIFEST"
           fi
 
+          # Copiar iconos de la aplicación
+          if [ -d resources/android ]; then
+            echo "Copiando iconos personalizados de la aplicación..."
+            cp -r resources/android/* android/app/src/main/res/
+          fi
+
           # Evita clases duplicadas de Kotlin entre módulos (solo si todavía no está)
           if ! grep -q "kotlin-stdlib-jdk7" android/build.gradle; then
             cat >> android/build.gradle << 'EOF'

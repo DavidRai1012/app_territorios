@@ -297,9 +297,9 @@ export default function SimpleMapViewer() {
       {/* 1. Cabecera Principal */}
       <header className="app-topbar">
         <div className="topbar-brand">
-          <span className="brand-icon">🗺️</span>
+          <img src="/icon.png" alt="Icono" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'contain' }} />
           <div className="brand-texts">
-            <h1 className="brand-heading">Territorios</h1>
+            <h1 className="brand-heading">territorios suba</h1>
             <span className="brand-subtext">{subtitle}</span>
           </div>
         </div>

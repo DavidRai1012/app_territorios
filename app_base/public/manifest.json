@@ -1,9 +1,16 @@
 {
-  "short_name": "Territorios",
-  "name": "Visor de Territorios",
+  "short_name": "territorios suba",
+  "name": "territorios suba",
   "start_url": "/",
   "background_color": "#7c3aed",
   "theme_color": "#7c3aed",
   "display": "standalone",
-  "orientation": "any"
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "278x280",
+      "type": "image/png"
+    }
+  ]
 }
