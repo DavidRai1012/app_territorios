@@ -1,6 +1,6 @@
 {
   "appId": "com.territorios.suba",
-  "appName": "territorios suba",
+  "appName": "Territorios Suba",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {

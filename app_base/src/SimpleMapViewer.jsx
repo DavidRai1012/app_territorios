@@ -152,6 +152,16 @@ export default function SimpleMapViewer() {
     }
   }, [selectedIds, selectAll]);
 
+  // Cambiar color de un territorio específico y persistir
+  const handleChangeColor = useCallback((territoryId, newColor) => {
+    setTerritories(prev => {
+      const updated = prev.map(t => t.id === territoryId ? { ...t, color: newColor } : t);
+      localStorage.setItem(STORAGE_KEYS.TERRITORIOS, JSON.stringify(updated));
+      return updated;
+    });
+    setSelectedTerritoryDetail(prev => prev && prev.id === territoryId ? { ...prev, color: newColor } : prev);
+  }, []);
+
   // Navegación Anterior / Siguiente en la Ficha
   const currentDetailIndex = useMemo(() => {
     if (!selectedTerritoryDetail) return -1;
@@ -299,7 +309,7 @@ export default function SimpleMapViewer() {
         <div className="topbar-brand">
           <img src="/icon.png" alt="Icono" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'contain' }} />
           <div className="brand-texts">
-            <h1 className="brand-heading">territorios suba</h1>
+            <h1 className="brand-heading">Territorios Suba</h1>
             <span className="brand-subtext">{subtitle}</span>
           </div>
         </div>
@@ -383,6 +393,7 @@ export default function SimpleMapViewer() {
             : false
         }
         onToggleSolo={() => handleToggleSolo(selectedTerritoryDetail)}
+        onChangeColor={handleChangeColor}
         onPrev={handlePrevTerritory}
         onNext={handleNextTerritory}
         hasPrev={currentDetailIndex > 0}

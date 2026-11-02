@@ -1,6 +1,7 @@
 node_modules/
 dist/
-android/
+/android/
+/app_base/android/
 node_env/
 node.zip
 cloudflared.exe

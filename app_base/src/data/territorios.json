@@ -16,7 +16,7 @@
     "occidente": ""
    },
    "calles": [],
-   "color": null,
+   "color": "#8b5cf6",
    "poligonos": [
     [
      [
@@ -92,7 +92,7 @@
     "occidente": ""
    },
    "calles": [],
-   "color": null,
+   "color": "#8b5cf6",
    "poligonos": [
     [
      [
@@ -300,7 +300,7 @@
     "occidente": ""
    },
    "calles": [],
-   "color": null,
+   "color": "#8b5cf6",
    "poligonos": [
     [
      [
@@ -384,7 +384,7 @@
     "occidente": ""
    },
    "calles": [],
-   "color": null,
+   "color": "#f97316",
    "poligonos": [
     [
      [
@@ -552,7 +552,7 @@
     "occidente": ""
    },
    "calles": [],
-   "color": null,
+   "color": "#10b981",
    "poligonos": [
     [
      [
@@ -744,7 +744,7 @@
     "occidente": ""
    },
    "calles": [],
-   "color": null,
+   "color": "#06b6d4",
    "poligonos": [
     [
      [
@@ -1024,7 +1024,7 @@
     "occidente": ""
    },
    "calles": [],
-   "color": null,
+   "color": "#06b6d4",
    "poligonos": [
     [
      [
@@ -1160,7 +1160,7 @@
     "occidente": ""
    },
    "calles": [],
-   "color": null,
+   "color": "#ec4899",
    "poligonos": [
     [
      [
@@ -1416,7 +1416,7 @@
     "occidente": ""
    },
    "calles": [],
-   "color": null,
+   "color": "#06b6d4",
    "poligonos": [
     [
      [
@@ -1664,7 +1664,7 @@
     "occidente": ""
    },
    "calles": [],
-   "color": null,
+   "color": "#8b5cf6",
    "poligonos": [
     [
      [
@@ -2128,7 +2128,7 @@
     "occidente": ""
    },
    "calles": [],
-   "color": null,
+   "color": "#f97316",
    "poligonos": [
     [
      [
@@ -2320,7 +2320,7 @@
     "occidente": ""
    },
    "calles": [],
-   "color": null,
+   "color": "#f97316",
    "poligonos": [
     [
      [
@@ -2700,7 +2700,7 @@
     "occidente": ""
    },
    "calles": [],
-   "color": null,
+   "color": "#8b5cf6",
    "poligonos": [
     [
      [
@@ -2972,7 +2972,7 @@
     "occidente": "Río Bogotá, entre la Cl. 144 y el humedal la Conejera"
    },
    "calles": [],
-   "color": null,
+   "color": "#8b5cf6",
    "poligonos": [
     [
      [
@@ -3248,7 +3248,7 @@
     "occidente": "Río Bogotá, entre la Cl. 144 y la Dg.138F; Cr. 149C, entre la Cl. 138F y la Cl. 137."
    },
    "calles": [],
-   "color": null,
+   "color": "#10b981",
    "poligonos": [
     [
      [
@@ -3376,7 +3376,7 @@
     "occidente": "Cr. 103F (Av. Ciudad de Cali), entre la Cl. 132 y Cl. 135A, Cl. 135A entre Av. Ciudad de Cali y Cr. 109, Cr. 109 entre Cl. 135A y Cl. 137."
    },
    "calles": [],
-   "color": null,
+   "color": "#f97316",
    "poligonos": [
     [
      [
@@ -3464,7 +3464,7 @@
     "occidente": "Av. Ciudad de Cali, entre la Cl. 139 y la Av. Tv. de Suba."
    },
    "calles": [],
-   "color": null,
+   "color": "#10b981",
    "poligonos": [
     [
      [
