@@ -1,8 +1,0 @@
-node_modules/
-dist/
-/android/
-node_env/
-node.zip
-cloudflared.exe
-.env
-.DS_Store

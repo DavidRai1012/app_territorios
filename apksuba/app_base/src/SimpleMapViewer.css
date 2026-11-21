@@ -404,6 +404,29 @@ html, body {
   border-color: var(--chip-color);
 }
 
+/* En modo oscuro, --primary-light es un color claro (lo fija el tema por JS),
+   lo que dejaba texto blanco sobre fondo casi blanco = ilegible. Aqui se usa
+   el propio color del territorio como fondo translucido y texto claro. */
+[data-dark-mode="dark"] .territory-chip.active {
+  background: color-mix(in srgb, var(--chip-color) 28%, #1e293b);
+  border-color: var(--chip-color);
+}
+[data-dark-mode="dark"] .territory-chip.active .chip-name,
+[data-dark-mode="dark"] .territory-chip.active .chip-number {
+  color: #f8fafc;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-dark-mode="auto"] .territory-chip.active {
+    background: color-mix(in srgb, var(--chip-color) 28%, #1e293b);
+    border-color: var(--chip-color);
+  }
+  [data-dark-mode="auto"] .territory-chip.active .chip-name,
+  [data-dark-mode="auto"] .territory-chip.active .chip-number {
+    color: #f8fafc;
+  }
+}
+
 .chip-dot {
   width: 12px;
   height: 12px;

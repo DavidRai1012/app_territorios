@@ -1,0 +1,12 @@
+node_modules/
+dist/
+/android/
+node_env/
+node.zip
+cloudflared.exe
+.env
+.DS_Store
+
+# Recursos grandes del mapa offline (se generan con Tilemaker, no se versionan)
+public/mapa/*.pmtiles
+public/mapa/glyphs/

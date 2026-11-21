@@ -265,3 +265,79 @@ export function generateDemoTerritories(centerLat = 4.745, centerLng = -74.095) 
 
   return demos;
 }
+
+// =====================================================================
+// Edificios (Salones del Reino) — construccion de GeoJSON
+// ---------------------------------------------------------------------
+// Mismo convenio que territorios: footprint en [lat, lng]. Se reutiliza
+// toGeoJSONCoords para convertir a [lng, lat] y cerrar anillos.
+// =====================================================================
+
+// FeatureCollection del footprint (planta) de cada edificio.
+export function buildEdificiosFeatureCollection(edificios) {
+  const features = [];
+
+  (edificios || []).forEach((e, index) => {
+    const rings = (e.poligonos || []).filter((r) => Array.isArray(r) && r.length >= 3);
+    if (rings.length === 0) return;
+
+    const geoJSONCoordinates = toGeoJSONCoords(rings);
+
+    features.push({
+      type: 'Feature',
+      id: e.id,
+      properties: {
+        id: e.id,
+        nombre: e.nombre || `Salon ${index + 1}`,
+        tipo: e.tipo || 'salon_del_reino',
+        techo: e.techo || 'recto',
+        pisos: e.pisos != null ? e.pisos : 1,
+        altura_m: e.altura_m != null ? e.altura_m : 3,
+        // color null => la capa usa el color global; si trae color propio, se respeta
+        colorPropio: e.color || null
+      },
+      geometry: {
+        type: 'Polygon',
+        coordinates: geoJSONCoordinates
+      }
+    });
+  });
+
+  return { type: 'FeatureCollection', features };
+}
+
+// FeatureCollection de puntos de etiqueta (centroide) para cada edificio.
+export function buildEdificiosLabelsFeatureCollection(edificios) {
+  const features = [];
+
+  (edificios || []).forEach((e) => {
+    const rings = (e.poligonos || []).filter((r) => Array.isArray(r) && r.length >= 3);
+    if (rings.length === 0) return;
+
+    // centroide simple del primer anillo en [lng, lat]
+    const ring = rings[0];
+    let sx = 0;
+    let sy = 0;
+    ring.forEach((p) => {
+      sx += p[1]; // lng
+      sy += p[0]; // lat
+    });
+    const centerLng = sx / ring.length;
+    const centerLat = sy / ring.length;
+
+    features.push({
+      type: 'Feature',
+      id: 'edificio-label-' + e.id,
+      properties: {
+        id: e.id,
+        nombre: e.nombre || 'Salon'
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [centerLng, centerLat]
+      }
+    });
+  });
+
+  return { type: 'FeatureCollection', features };
+}

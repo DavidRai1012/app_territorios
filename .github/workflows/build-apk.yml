@@ -17,12 +17,16 @@ jobs:
 
       - name: 2. Detectar carpeta de la app
         run: |
+          # La app Android (apksuba) vive en apksuba/app_base tras la reorganización.
+          # Se mantienen las rutas antiguas como respaldo por compatibilidad.
           if [ -f package.json ]; then
             echo "APP_DIR=." >> "$GITHUB_ENV"
+          elif [ -f apksuba/app_base/package.json ]; then
+            echo "APP_DIR=apksuba/app_base" >> "$GITHUB_ENV"
           elif [ -f app_base/package.json ]; then
             echo "APP_DIR=app_base" >> "$GITHUB_ENV"
           else
-            echo "::error::No encuentro package.json ni en la raíz del repo ni en app_base/"
+            echo "::error::No encuentro package.json en la raíz, en apksuba/app_base/ ni en app_base/"
             exit 1
           fi
 

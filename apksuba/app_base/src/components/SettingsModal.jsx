@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { APP_THEMES } from '../config/mapa';
+import { APP_THEMES, SALON_COLORES } from '../config/mapa';
 
 export default function SettingsModal({
   isOpen,
@@ -20,7 +20,20 @@ export default function SettingsModal({
   onToggleDemoData,
   hasDemoData,
   dataVersionDate,
-  territoriesCount
+  territoriesCount,
+  // Salones del Reino
+  salonColor,
+  onSelectSalonColor,
+  salonesVisible,
+  onToggleSalonesVisible,
+  salones3D,
+  onToggleSalones3D,
+  salonesCount,
+  // Mapa base online/offline
+  mapSourceMode,
+  onSelectMapSourceMode,
+  online,
+  fuenteMapa
 }) {
   const [importSummary, setImportSummary] = useState(null);
   const [pendingImportData, setPendingImportData] = useState(null);
@@ -142,9 +155,112 @@ export default function SettingsModal({
                 className="ios-switch"
               />
             </div>
+
+            <label className="setting-label" style={{ marginTop: 14 }}>
+              Datos del mapa de calles
+            </label>
+            <div className="segmented-control">
+              <button
+                className={mapSourceMode === 'auto' ? 'active' : ''}
+                onClick={() => onSelectMapSourceMode && onSelectMapSourceMode('auto')}
+                title="Usa internet si hay conexión; si no, el mapa sin conexión"
+              >
+                ⚙️ Automático
+              </button>
+              <button
+                className={mapSourceMode === 'online' ? 'active' : ''}
+                onClick={() => onSelectMapSourceMode && onSelectMapSourceMode('online')}
+                title="Siempre por internet (mejor detalle)"
+              >
+                🌐 Internet
+              </button>
+              <button
+                className={mapSourceMode === 'offline' ? 'active' : ''}
+                onClick={() => onSelectMapSourceMode && onSelectMapSourceMode('offline')}
+                title="Siempre sin conexión (ahorra datos)"
+              >
+                📴 Sin conexión
+              </button>
+            </div>
+            <p className="text-muted" style={{ fontSize: '0.78rem', marginTop: 6 }}>
+              {fuenteMapa && fuenteMapa.tipo === 'calles' && fuenteMapa.esLocal
+                ? 'Ahora mismo el mapa de calles funciona sin conexión.'
+                : 'Ahora mismo el mapa de calles usa internet.'}
+              {' '}
+              El mapa satélite siempre necesita internet.
+            </p>
           </section>
 
-          {/* 4. Gestión de Territorios */}
+          {/* 4. Salones del Reino */}
+          <section className="setting-section">
+            <label className="setting-label">
+              Salones del Reino ({salonesCount || 0})
+            </label>
+
+            <div className="toggle-row">
+              <span>Mostrar salones en el mapa</span>
+              <input
+                type="checkbox"
+                checked={salonesVisible}
+                onChange={(e) => onToggleSalonesVisible(e.target.checked)}
+                className="ios-switch"
+              />
+            </div>
+
+            <div className="toggle-row" style={{ marginTop: 10 }}>
+              <span>Relieve 3D de los salones</span>
+              <input
+                type="checkbox"
+                checked={salones3D}
+                onChange={(e) => onToggleSalones3D(e.target.checked)}
+                className="ios-switch"
+              />
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Color de los salones</span>
+              <div className="theme-circles-row" style={{ marginTop: 8 }}>
+                {SALON_COLORES.map((c) => (
+                  <button
+                    key={c.id}
+                    className={`theme-circle ${(salonColor || '').toLowerCase() === c.color.toLowerCase() ? 'active' : ''}`}
+                    style={{ backgroundColor: c.color }}
+                    onClick={() => onSelectSalonColor(c.color)}
+                    title={c.nombre}
+                  >
+                    {(salonColor || '').toLowerCase() === c.color.toLowerCase() && '✓'}
+                  </button>
+                ))}
+                <label
+                  className="theme-circle"
+                  style={{
+                    background: 'conic-gradient(red, orange, yellow, lime, cyan, blue, magenta, red)',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                  title="Color personalizado"
+                >
+                  <input
+                    type="color"
+                    value={salonColor || '#4a6da7'}
+                    onChange={(e) => onSelectSalonColor(e.target.value)}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      opacity: 0,
+                      cursor: 'pointer'
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+          </section>
+
+          {/* 5. Gestión de Territorios */}
           <section className="setting-section">
             <label className="setting-label">
               Datos de Territorios ({territoriesCount} cargados)
@@ -175,10 +291,10 @@ export default function SettingsModal({
             </div>
           </section>
 
-          {/* 5. Acerca de */}
+          {/* 6. Acerca de */}
           <section className="setting-section about-section">
             <p><strong>Visor de Territorios Suba</strong></p>
-            <p className="text-muted">Versión 1.3.0 • Motor MapLibre GL 3D</p>
+            <p className="text-muted">Versión 1.4.1 • Motor MapLibre GL 3D</p>
             <p className="text-muted">Actualizado: {dataVersionDate || 'Octubre 2026'}</p>
           </section>
         </div>

@@ -3,9 +3,11 @@ import MapLibreMap from './components/MapLibreMap';
 import FilterDrawer from './components/FilterDrawer';
 import TerritoryDetailSheet from './components/TerritoryDetailSheet';
 import SettingsModal from './components/SettingsModal';
-import { STORAGE_KEYS, APP_THEMES } from './config/mapa';
+import { STORAGE_KEYS, APP_THEMES, SALON_COLOR_DEFAULT } from './config/mapa';
 import defaultBundle from './data/territorios.json';
+import edificiosBundle from './data/edificios.json';
 import { generateDemoTerritories } from './utils/geoUtils';
+import { hayInternet, observarConexion } from './utils/connectivity';
 
 export default function SimpleMapViewer() {
   // 1. Cargar territorios (localStorage o fábrica)
@@ -70,6 +72,35 @@ export default function SimpleMapViewer() {
     return defaultBundle.grupos || [];
   });
 
+  // 9. Salones del Reino (edificios): datos locales + configuracion
+  const [edificios] = useState(() => edificiosBundle.edificios || []);
+
+  const [salonColor, setSalonColor] = useState(() => {
+    return localStorage.getItem(STORAGE_KEYS.SALON_COLOR) || SALON_COLOR_DEFAULT;
+  });
+
+  const [salonesVisible, setSalonesVisible] = useState(() => {
+    const val = localStorage.getItem(STORAGE_KEYS.SALONES_VISIBLE);
+    return val !== null ? val === 'true' : true;
+  });
+
+  const [salones3D, setSalones3D] = useState(() => {
+    const val = localStorage.getItem(STORAGE_KEYS.SALONES_3D);
+    return val !== null ? val === 'true' : true; // relieve 3D activo por defecto
+  });
+
+  // 10. Mapa base online/offline
+  // Modo elegido por el usuario: 'auto' | 'online' | 'offline'
+  const [mapSourceMode, setMapSourceMode] = useState(() => {
+    return localStorage.getItem(STORAGE_KEYS.MAP_SOURCE_MODE) || 'auto';
+  });
+  // ¿Hay internet utilizable? (se verifica de verdad, no solo navigator.onLine)
+  // Valor inicial: lo que declara el sistema (false en modo avion), para que
+  // el primer mapa ya arranque con la fuente correcta.
+  const [online, setOnline] = useState(() => navigator.onLine !== false);
+  // Estado real de la fuente que esta usando el mapa (para avisos en UI)
+  const [fuenteMapa, setFuenteMapa] = useState({ tipo: 'calles', esLocal: false });
+
   // Estados de modales y hojas
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -106,6 +137,55 @@ export default function SimpleMapViewer() {
       localStorage.setItem(STORAGE_KEYS.SELECTED_IDS, JSON.stringify(Array.from(selectedIds)));
     } catch (e) {}
   }, [selectedIds]);
+
+  // Persistir configuración de salones
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SALON_COLOR, salonColor);
+  }, [salonColor]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SALONES_VISIBLE, String(salonesVisible));
+  }, [salonesVisible]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SALONES_3D, String(salones3D));
+  }, [salones3D]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.MAP_SOURCE_MODE, mapSourceMode);
+  }, [mapSourceMode]);
+
+  // Verificar conectividad real al inicio y ante cambios de red.
+  useEffect(() => {
+    let activo = true;
+    hayInternet().then((ok) => {
+      if (activo) setOnline(ok);
+    });
+    const cancelar = observarConexion((ok) => {
+      if (activo) setOnline(ok);
+    });
+    return () => {
+      activo = false;
+      cancelar();
+    };
+  }, []);
+
+  // El satelite no existe sin internet. Si se pierde la conexion con el
+  // satelite activo, se vuelve al mapa de calles (sin cambiar la preferencia
+  // guardada del usuario).
+  useEffect(() => {
+    if (!online && baseMapType === 'sat') setBaseMapType('calles');
+  }, [online, baseMapType]);
+
+  // Decide si el mapa debe usar la fuente LOCAL (PMTiles) o la ONLINE.
+  //   'online'  -> nunca local
+  //   'offline' -> siempre local
+  //   'auto'    -> local solo cuando no hay internet
+  const usarMapaLocal = useMemo(() => {
+    if (mapSourceMode === 'online') return false;
+    if (mapSourceMode === 'offline') return true;
+    return !online; // auto
+  }, [mapSourceMode, online]);
 
   // Manejadores de selección
   const toggleTerritory = useCallback((id) => {
@@ -310,7 +390,10 @@ export default function SimpleMapViewer() {
           <img src="/icon.png" alt="Icono" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'contain' }} />
           <div className="brand-texts">
             <h1 className="brand-heading">Territorios Suba</h1>
-            <span className="brand-subtext">{subtitle}</span>
+            <span className="brand-subtext">
+              {subtitle}
+              {fuenteMapa.tipo === 'calles' && fuenteMapa.esLocal && ' • 📴 sin conexión'}
+            </span>
           </div>
         </div>
 
@@ -320,6 +403,11 @@ export default function SimpleMapViewer() {
             className="topbar-pill-btn"
             onClick={() => {
               const next = baseMapType === 'calles' ? 'sat' : 'calles';
+              // El satelite es solo online. Si se intenta sin conexion, avisar.
+              if (next === 'sat' && (usarMapaLocal || !online)) {
+                alert('🛰️ El mapa satélite necesita conexión a internet.\nSin conexión solo está disponible el mapa de calles.');
+                return;
+              }
               setBaseMapType(next);
               localStorage.setItem(STORAGE_KEYS.MAP_STYLE, next);
             }}
@@ -358,6 +446,12 @@ export default function SimpleMapViewer() {
           tiltEnabled={tiltEnabled}
           autoFitTrigger={autoFitTrigger}
           themeColor={activeTheme.color}
+          edificios={edificios}
+          salonColor={salonColor}
+          showEdificios={salonesVisible}
+          edificios3D={salones3D}
+          usarMapaLocal={usarMapaLocal}
+          onEstadoFuente={setFuenteMapa}
         />
       </main>
 
@@ -430,6 +524,17 @@ export default function SimpleMapViewer() {
         hasDemoData={hasDemoData}
         dataVersionDate={defaultBundle.actualizado}
         territoriesCount={territories.length}
+        salonColor={salonColor}
+        onSelectSalonColor={setSalonColor}
+        salonesVisible={salonesVisible}
+        onToggleSalonesVisible={setSalonesVisible}
+        salones3D={salones3D}
+        onToggleSalones3D={setSalones3D}
+        salonesCount={edificios.length}
+        mapSourceMode={mapSourceMode}
+        onSelectMapSourceMode={setMapSourceMode}
+        online={online}
+        fuenteMapa={fuenteMapa}
       />
     </div>
   );
