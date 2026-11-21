@@ -1,0 +1,17 @@
+# Dependencias
+node_modules/
+
+# Base de datos SQLite (datos locales; no se versiona)
+*.db
+*.db-wal
+*.db-shm
+
+# Respaldos generados
+backups/*
+!backups/.gitkeep
+
+# Build del frontend
+cliente/dist/
+
+# Variables de entorno (claves, contraseñas admin, etc.)
+.env
